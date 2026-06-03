@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>tedana report</title>
+    <meta
+      name="viewport"
+      content="width = device-width, initial-scale = 1"
+      charset="UTF-8"
+    />
+    <script
+      src="https://cdn.bokeh.org/bokeh/release/bokeh-3.8.1.min.js"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-3.8.1.min.js"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdn.bokeh.org/bokeh/release/bokeh-tables-3.8.1.min.js"
+      crossorigin="anonymous"
+    ></script>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/purecss@1.0.1/build/pure-min.css"
+      integrity="sha384-oAOxQR6DkCoMliIh8yFnu25d7Eq/PHS21PClpwjOTeU2jRSq11vu66rf90/cZr47"
+      crossorigin="anonymous"
+    />
+
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/tokyo-night-dark.min.css"
+    />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
+
+    <!-- and it's easy to individually load additional languages -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/go.min.js"></script>
+
+    <script>
+      hljs.highlightAll();
+    </script>
+
+    <!-- CSS for the report -->
+    <style type="text/css">
+      body {
+        padding: 10px 20px 10px 20px;
+      }
+    </style>
+  </head>
+
+  <nav>
+    <div class="pure-menu pure-menu-horizontal">
+      <a
+        href="https://github.com/ME-ICA/tedana"
+        class="pure-menu-heading pure-menu-link"
+        >tedana 26.0.4.dev24+gdd24fef9a</a
+      >
+      <ul class="pure-menu-list">
+        <li class="pure-menu-item">
+          <a href="https://tedana.readthedocs.io" class="pure-menu-link"
+            >Reporting documentation</a
+          >
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <body>
+    <style type="text/css">
+  .brainplot {
+    width: 50%;
+    height: auto;
+  }
+
+  .report {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .content {
+    margin-left: 5%;
+    margin-right: 5%;
+    margin-bottom: 150px;
+    height: auto;
+    float: left;
+  }
+
+  .about {
+    position: relative;
+    top: -50px;
+    margin-left: 5%;
+    margin-right: 5%;
+    white-space: pre-line;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: larger;
+    float: left;
+    width: 80%;
+  }
+
+  .references ul {
+    line-height: 150%;
+  }
+
+  .carpet-wrapper {
+    margin-top: 30px;
+  }
+
+  .carpet-plots {
+    float: left;
+    margin-left: 5%;
+    margin-right: 5%;
+    margin-bottom: 100px;
+  }
+
+  .carpet-buttons {
+    height: 40px;
+    padding-bottom: 5px;
+  }
+
+  .carpet-image {
+    margin-top: 20px;
+  }
+
+  .info {
+    margin-left: 5%;
+    margin-right: 5%;
+    margin-bottom: 150px;
+    height: auto;
+    float: left;
+  }
+
+  .tsne-plots {
+    float: left;
+    margin-left: 5%;
+    margin-right: 5%;
+    margin-bottom: 100px;
+  }
+
+  button {
+    margin-right: 15px;
+    width: auto;
+    border-radius: 6px;
+    border-top: none;
+    text-align: center;
+    color: black;
+    padding: 10px;
+    float: left;
+    font-size: 18px;
+    font-weight: 700;
+    height: 40px;
+  }
+
+  button:hover {
+    opacity: 0.8;
+  }
+
+  button:active {
+    width: auto;
+    border-radius: 6px;
+    border-top: none;
+    text-align: center;
+    color: black;
+    padding: 10px;
+    margin-top: 3px;
+    float: left;
+  }
+
+  .blue {
+    background: #8caef9;
+    border-bottom: #6684c6 3px solid;
+    border-left: #6684c6 1px solid;
+    border-right: #6684c6 1px solid;
+  }
+
+  .blue:active {
+    background: #7fa5f8;
+    border-bottom: #6684c6 1px solid;
+    border-left: #6684c8 1px solid;
+    border-right: #6684c6 1px solid;
+  }
+
+  .red {
+    background: #ec5e57;
+    border-bottom: #bb3d36 3px solid;
+    border-left: #bb3d36 1px solid;
+    border-right: #bb3d36 1px solid;
+  }
+
+  .red:active {
+    background: #ea4c44;
+    border-bottom: #bb3d36 1px solid;
+    border-left: #bb3d36 1px solid;
+    border-right: #bb3d36 1px solid;
+  }
+
+  .green {
+    background: #74ca74;
+    border-bottom: #509d51 3px solid;
+    border-left: #509d51 1px solid;
+    border-right: #509d51 1px solid;
+  }
+
+  .green:active {
+    background: #64c465;
+    border-bottom: #509d51 1px solid;
+    border-left: #509d51 1px solid;
+    border-right: #509d51 1px solid;
+  }
+
+  .yellow {
+    background: #f7ce5f;
+    border-bottom: #c5a13e 3px solid;
+    border-left: #c5a13e 1px solid;
+    border-right: #c5a13e 1px solid;
+  }
+
+  .yellow:active {
+    background: #f6c94d;
+    border-bottom: #c5a13e 1px solid;
+    border-left: #c5a13e 1px solid;
+    border-right: #c5a13e 1px solid;
+  }
+
+  td {
+    padding: 0.3rem 1.5rem;
+  }
+
+  pre {
+    width: 60%;
+    white-space: pre-wrap; /* Since CSS 2.1 */
+    white-space: -moz-pre-wrap; /* Mozilla, since 1999 */
+    white-space: -pre-wrap; /* Opera 4-6 */
+    white-space: -o-pre-wrap; /* Opera 7 */
+    word-wrap: break-word; /* Internet Explorer 5.5+ */
+  }
+
+  .code_block {
+    padding: 2em !important;
+    border-radius: 5px;
+  }
+
+  /* Rica button styles */
+  .rica-button-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+  }
+
+  .rica-button {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    padding: 12px 20px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+    transition: transform 0.2s, box-shadow 0.2s;
+    float: none;
+    height: auto;
+  }
+
+  .rica-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+    opacity: 1;
+  }
+
+  .rica-button:active {
+    transform: translateY(0);
+    float: none;
+    margin-top: 0;
+  }
+
+  /* Rica modal styles */
+  .rica-modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 2000;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .rica-modal {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    position: relative;
+  }
+
+  .rica-modal h2 {
+    margin: 0 0 15px 0;
+    color: #333;
+    font-size: 24px;
+  }
+
+  .rica-modal p {
+    color: #555;
+    line-height: 1.6;
+    margin-bottom: 15px;
+  }
+
+  .rica-modal code {
+    background: #f4f4f4;
+    padding: 10px 15px;
+    border-radius: 6px;
+    display: block;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    color: #333;
+    margin: 15px 0;
+  }
+
+  .rica-modal-close {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #999;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    line-height: 30px;
+    float: none;
+  }
+
+  .rica-modal-close:hover {
+    color: #333;
+    opacity: 1;
+  }
+
+  .rica-modal-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  .rica-modal-btn {
+    flex: 1;
+    padding: 12px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    float: none;
+    height: auto;
+  }
+
+  .rica-modal-btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+  }
+
+  .rica-modal-btn-secondary {
+    background: #f0f0f0;
+    color: #333;
+    border: 1px solid #ddd;
+  }
+</style>
+
+<!-- Rica Button -->
+<div class="rica-button-container">
+  <button type="button" class="rica-button" onclick="openRicaModal()" aria-haspopup="dialog">
+    🔍 Open in Rica
+  </button>
+</div>
+
+<!-- Rica Modal -->
+<div class="rica-modal-overlay" id="ricaModal" role="dialog" aria-modal="true" aria-labelledby="ricaModalTitle">
+  <div class="rica-modal">
+    <button type="button" class="rica-modal-close" onclick="closeRicaModal()" aria-label="Close modal">×</button>
+    <h2 id="ricaModalTitle">Open in Rica</h2>
+    <p>
+      <strong>Rica</strong> is an interactive web-based tool for exploring ICA components
+      with 3D brain visualization and
+      can be used to manually change component classifications.
+    </p>
+    <p>
+      To view these results in Rica locally, run this command in your output directory:
+    </p>
+    <code>python open_rica_report.py</code>
+    <p style="font-size: 13px; color: #777;">
+      This will download Rica (if needed), start a local server, and open your browser.
+    </p>
+    <div class="rica-modal-buttons">
+      <button type="button" class="rica-modal-btn rica-modal-btn-secondary" onclick="closeRicaModal()">
+        Close
+      </button>
+      <button type="button" class="rica-modal-btn rica-modal-btn-primary" onclick="openRicaWebsite()">
+        Learn more about Rica →
+      </button>
+    </div>
+  </div>
+</div>
+<div class="content">
+  <h1>ICA components</h1>
+  <div id="dc81cb72-4f31-4b9f-b3c5-5cbe68ef010e" data-root-id="p5172" style="display: contents;"></div>
+</div>
+<div></div>
+<div class="carpet-plots">
+  <h1>Carpet plots</h1>
+  <div class="carpet-wrapper">
+    <div class="carpet-buttons"><button
+  class="blue"
+  type="button"
+  onClick="updateCarpetPlot('optcom_nogsr')"
+  style="display:none"
+>
+  Optimally combined with global signal
+</button>
+<button class="blue" type="button" onClick="updateCarpetPlot('optcom')">
+  Optimally combined 
+</button>
+<button class="yellow" type="button" onClick="updateCarpetPlot('denoised')">
+  Denoised 
+</button>
+<button
+  class="yellow"
+  type="button"
+  onClick="updateCarpetPlot('denoised_mir')"
+  style="display:none"
+>
+  Denoised after MIR
+</button>
+<button class="green" type="button" onClick="updateCarpetPlot('accepted')">
+  Accepted 
+</button>
+<button
+  class="green"
+  type="button"
+  onClick="updateCarpetPlot('accepted_mir')"
+  style="display:none"
+>
+  Accepted after MIR
+</button>
+<button class="red" type="button" onClick="updateCarpetPlot('rejected')">
+  Rejected
+</button></div>
+    <div class="carpet-plots-image">
+      <img
+        id="imgCarpetPlot"
+        src="./figures/carpet_optcom.svg"
+        style="width: 95%; max-width: 1200px; height: auto"
+      />
+    </div>
+  </div>
+</div>
+
+<div class="carpet-plots">
+  <h1>Adaptive mask</h1>
+  <img
+    id="adaptiveMask"
+    src="./figures/adaptive_mask.svg"
+    style="width: 95%; max-width: 1200px; height: auto"
+  />
+</div>
+
+<div class="carpet-plots">
+  
+  <h2>T2*</h2>
+  <div class="carpet-plots-image">
+    <img
+      id="t2starBrainPlot"
+      src="./figures/t2star_brain.svg"
+      style="width: 95%; max-width: 1200px; height: auto"
+    />
+  </div>
+  <div class="carpet-plots-image">
+    <img
+      id="t2starHistogram"
+      src="./figures/t2star_histogram.svg"
+      style="width: 95%; max-width: 1200px; height: auto"
+    />
+  </div>
+    
+  <h2>S0</h2>
+  <div class="carpet-plots-image">
+    <img
+      id="s0BrainPlot"
+      src="./figures/s0_brain.svg"
+      style="width: 95%; max-width: 1200px; height: auto"
+    />
+  </div>
+  <div class="carpet-plots-image">
+    <img
+      id="s0Histogram"
+      src="./figures/s0_histogram.svg"
+      style="width: 95%; max-width: 1200px; height: auto"
+    />
+  </div>
+    
+  <h2>
+    T2* and S0 model fit (RMSE). (Scaled between 2nd and 98th percentiles)
+  </h2>
+  <div class="carpet-plots-image">
+    <img
+      id="rmseBrainPlot"
+      src="./figures/rmse_brain.svg"
+      style="width: 95%; max-width: 1200px; height: auto"
+    />
+  </div>
+  <div class="carpet-plots-image">
+    <img
+      id="rmseTimeseries"
+      src="./figures/rmse_timeseries.svg"
+      style="width: 95%; max-width: 1200px; height: auto"
+    />
+  </div>
+  
+</div>
+
+
+
+<div class="carpet-plots">
+  <div class="carpet-plots-image">
+  <h1>External Regressors</h1>
+  <img
+    id="externalRegressorCorrelations"
+    src="./figures/confound_correlations.svg"
+    style="width: 95%; max-width: 1200px; height: auto"
+  />
+  </div>
+</div>
+
+
+<div class="info">
+  <h1>Info</h1>
+  <div>
+  <p>
+    <span class="title">Tedana command used:</span>
+  <pre class="language-python">
+      <code class="code_block">
+        tedana_workflow(data=['five-echo-dataset/p06.SBJ01_S09_Task11_e1.sm.nii.gz', 'five-echo-dataset/p06.SBJ01_S09_Task11_e2.sm.nii.gz', 'five-echo-dataset/p06.SBJ01_S09_Task11_e3.sm.nii.gz', 'five-echo-dataset/p06.SBJ01_S09_Task11_e4.sm.nii.gz', 'five-echo-dataset/p06.SBJ01_S09_Task11_e5.sm.nii.gz'], tes=[15.4, 29.7, 44.0, 58.3, 72.6], out_dir=/Users/handwerkerd/Documents/code/meica/ohbm-2026-multiecho/five-echo-dataset/tedana_external_regress_processed, mask=None, convention=bids, prefix=, dummy_scans=0, masktype=['dropout'], fittype=loglin, combmode=t2s, n_independent_echos=None, tree=demo_external_regressors_motion_task_models, external_regressors=five-echo-dataset/external_regressors.tsv, ica_method=fastica, n_robust_runs=30, tedpca=aic, fixed_seed=42, maxit=500, maxrestart=10, tedort=False, gscontrol=None, no_reports=False, png_cmap=coolwarm, verbose=False, low_mem=False, debug=False, quiet=False, overwrite=False, t2smap=None, mixing_file=five-echo-dataset/tedana_processed/desc-ICA_mixing.tsv, n_threads=1)
+      </code>
+    </pre>
+  </p>
+  <table>
+    <tr>
+      <td class="title">System:</td>
+      <td>Darwin</td>
+    </tr>
+    <tr>
+      <td class="title">Node:</td>
+      <td>MH01557431MLI</td>
+    </tr>
+    <tr>
+      <td class="title">Release:</td>
+      <td>24.6.0</td>
+    </tr>
+    <tr>
+      <td class="title">System version:</td>
+      <td>Darwin Kernel Version 24.6.0: Fri Feb 27 19:34:59 PST 2026; root:xnu-11417.140.69.709.8~1/RELEASE_ARM64_T6041</td>
+    </tr>
+    <tr>
+      <td class="title">Machine:</td>
+      <td>arm64</td>
+    </tr>
+    <tr>
+      <td class="title">Processor:</td>
+      <td>arm</td>
+    </tr>
+    <tr>
+      <td class="title">Python:</td>
+      <td>3.12.12 | packaged by conda-forge | (main, Oct 22 2025, 23:34:53) [Clang 19.1.7 ]</td>
+    </tr>
+    <tr>
+      <td class="title">Tedana version:</td>
+      <td>26.0.4.dev24+gdd24fef9a</td>
+    </tr>
+    <tr>
+      <td class="title">Other library versions:</td>
+      <td>{'bokeh': '3.8.1', 'mapca': '0.0.7', 'matplotlib': '3.10.8', 'nibabel': '5.3.2', 'nilearn': '0.13.2.dev93+gf9740f67e', 'numpy': '2.3.5', 'pandas': '3.0.0', 'robustica': '0.1.4', 'scikit-learn': '1.8.0', 'scipy': '1.16.3', 'threadpoolctl': '3.6.0', 'tqdm': '4.67.1'}</td>
+    </tr>
+  </table>
+</div>
+</div>
+<div class="about">
+  <h1>About tedana</h1>
+  This is based on the minimal criteria of the original MEICA decision tree (Kundu et al. 2013) without the more aggressive noise removal steps (DuPre et al. 2021). TE-dependence analysis was performed on input data using the tedana workflow (DuPre et al. 2021). An initial mask was generated from the first echo using nilearn's compute_epi_mask function. An adaptive mask was then generated using the dropout method(s), in which each voxel's value reflects the number of echoes with 'good' data. An adaptive mask was then generated using the dropout method(s), in which each voxel's value reflects the number of echoes with 'good' data. A two-stage masking procedure was applied, in which a liberal mask (including voxels with good data in at least the first echo) was used for optimal combination, T2*/S0 estimation, and denoising, while a more conservative mask (restricted to voxels with good data in at least the first three echoes) was used for the component classification procedure. A monoexponential model was fit to the data at each voxel using log-linear regression in order to estimate T2* and S0 maps. For each voxel, the value from the adaptive mask was used to determine which echoes would be used to estimate T2* and S0. Multi-echo data were then optimally combined using the T2* combination method (Posse et al. 1999). The following metrics were calculated: R2stat nuisance model, R2stat task model, countsigFS0, countsigFT2, dice_FS0, dice_FT2, kappa, normalized variance explained, pval nuisance CSF partial model, pval nuisance Motion partial model, pval nuisance model, pval task model, rho, signal-noise_t, variance explained. Kappa (kappa) and Rho (rho) were calculated as measures of TE-dependence and TE-independence, respectively. A t-test was performed between the distributions of T2*-model F-statistics associated with clusters (i.e., signal) and non-cluster voxels (i.e., noise) to generate a t-statistic (metric signal-noise_z) and p-value (metric signal-noise_p) measuring relative association of the component to signal over noise. {'External nuisance regressors that fit to components using a linear model were rejected.'} {'Task regressors that fit to components using a linear model and have some T2* weighting were accepted even if they would have been rejected base on other criteriea.'}
+
+ Next, component selection was performed to identify BOLD (TE-dependent) and non-BOLD (TE-independent) components using a decision tree.
+
+ This workflow used numpy (Van Der Walt et al. 2011), scipy (Virtanen et al. 2020), pandas (McKinney et al. 2010, pandas development team et al. 2020), scikit-learn (Pedregosa et al. 2011), nilearn, bokeh (Team et al. 2018), matplotlib (Hunter et al. 2007), and nibabel (Brett et al. 2019). This workflow also used the Dice similarity index (Dice et al. 1945, Sorensen et al. 1948).
+</div>
+<div class="content references">
+  <h1>References</h1>
+  <ul>
+    <li>Brett, M., Markiewicz, C.&nbsp;J., Hanke, M., Côté, M.-A., Cipollini, B., McCarthy, P., … freec84 (2019 , May).
+<em>nipy/nibabel: 2.4.1</em>.</li><li>Dice, L.&nbsp;R.
+(1945).
+Measures of the amount of ecologic association between species.
+<em>Ecology</em>, <em>26</em>(3), 297–302.
+URL: <a href="https://doi.org/10.2307/1932409">https://doi.org/10.2307/1932409</a>, <a href="https://doi.org/10.2307/1932409">doi:10.2307/1932409</a></li><li>DuPre, E., Salo, T., Ahmed, Z., Bandettini, P.&nbsp;A., Bottenhorn, K.&nbsp;L., Caballero-Gaudes, C., … others.
+(2021).
+Te-dependent analysis of multi-echo fmri with* tedana.
+<em>Journal of Open Source Software</em>, <em>6</em>(66), 3669.
+URL: <a href="https://doi.org/10.21105/joss.03669">https://doi.org/10.21105/joss.03669</a>, <a href="https://doi.org/10.21105/joss.03669">doi:10.21105/joss.03669</a></li><li>Hunter, J.&nbsp;D.
+(2007).
+Matplotlib: a 2d graphics environment.
+<em>Computing in Science &amp; Engineering</em>, <em>9</em>(3), 90–95.
+<a href="https://doi.org/10.1109/MCSE.2007.55">doi:10.1109/MCSE.2007.55</a></li><li>Kundu, P., Brenowitz, N.&nbsp;D., Voon, V., Worbe, Y., V<span class="bibtex-protected">é</span>rtes, P.&nbsp;E., Inati, S.&nbsp;J., … Bullmore, E.&nbsp;T.
+(2013).
+Integrated strategy for improving functional connectivity mapping using multiecho fmri.
+<em>Proceedings of the National Academy of Sciences</em>, <em>110</em>(40), 16187–16192.
+URL: <a href="https://doi.org/10.1073/pnas.1301725110">https://doi.org/10.1073/pnas.1301725110</a>, <a href="https://doi.org/10.1073/pnas.1301725110">doi:10.1073/pnas.1301725110</a></li><li>McKinney, W., &amp; others. (2010).
+Data structures for statistical computing in python.
+<em>Proceedings of the 9th Python in Science Conference</em> (pp.&nbsp;51–56).
+URL: <a href="https://doi.org/10.25080/Majora-92bf1922-00a">https://doi.org/10.25080/Majora-92bf1922-00a</a>, <a href="https://doi.org/10.25080/Majora-92bf1922-00a">doi:10.25080/Majora-92bf1922-00a</a></li><li>pandas&nbsp;development team, T. (2020 , February).
+<em>pandas-dev/pandas: Pandas</em>.</li><li>Pedregosa, F., Varoquaux, G., Gramfort, A., Michel, V., Thirion, B., Grisel, O., … others.
+(2011).
+Scikit-learn: machine learning in python.
+<em>the Journal of machine Learning research</em>, <em>12</em>, 2825–2830.
+URL: <a href="http://jmlr.org/papers/v12/pedregosa11a.html">http://jmlr.org/papers/v12/pedregosa11a.html</a></li><li>Posse, S., Wiese, S., Gembris, D., Mathiak, K., Kessler, C., Grosse-Ruyken, M.-L., … Kiselev, V.&nbsp;G.
+(1999).
+Enhancement of bold-contrast sensitivity by single-shot multi-echo functional mr imaging.
+<em>Magnetic Resonance in Medicine: An Official Journal of the International Society for Magnetic Resonance in Medicine</em>, <em>42</em>(1), 87–97.
+URL: <a href="https://doi.org/10.1002/(SICI)1522-2594(199907)42:1<87::AID-MRM13>3.0.CO;2-O">https://doi.org/10.1002/(SICI)1522-2594(199907)42:1&lt;87::AID-MRM13&gt;3.0.CO;2-O</a>, <a href="https://doi.org/10.1002/(SICI)1522-2594(199907)42:1<87::AID-MRM13>3.0.CO;2-O">doi:10.1002/(SICI)1522-2594(199907)42:1&lt;87::AID-MRM13&gt;3.0.CO;2-O</a></li><li>Sorensen, T.&nbsp;A.
+(1948).
+A method of establishing groups of equal amplitude in plant sociology based on similarity of species content and its application to analyses of the vegetation on danish commons.
+<em>Biol. Skar.</em>, <em>5</em>, 1–34.</li><li>Team, B.&nbsp;D. (2018).
+<em>Bokeh: Python library for interactive visualization</em>.
+URL: <a href="https://bokeh.pydata.org/en/latest/">https://bokeh.pydata.org/en/latest/</a></li><li>Van Der&nbsp;Walt, S., Colbert, S.&nbsp;C., &amp; Varoquaux, G.
+(2011).
+The numpy array: a structure for efficient numerical computation.
+<em>Computing in science &amp; engineering</em>, <em>13</em>(2), 22–30.
+URL: <a href="https://doi.org/10.1109/MCSE.2011.37">https://doi.org/10.1109/MCSE.2011.37</a>, <a href="https://doi.org/10.1109/MCSE.2011.37">doi:10.1109/MCSE.2011.37</a></li><li>Virtanen, P., Gommers, R., Oliphant, T.&nbsp;E., Haberland, M., Reddy, T., Cournapeau, D., … others.
+(2020).
+Scipy 1.0: fundamental algorithms for scientific computing in python.
+<em>Nature methods</em>, <em>17</em>(3), 261–272.
+URL: <a href="https://doi.org/10.1038/s41592-019-0686-2">https://doi.org/10.1038/s41592-019-0686-2</a>, <a href="https://doi.org/10.1038/s41592-019-0686-2">doi:10.1038/s41592-019-0686-2</a></li>
+  </ul>
+</div>
+
+<script type="text/javascript">
+  function updateCarpetPlot(name) {
+    // Create variable to hold the image source
+    let carpetPlot = "./figures/";
+
+    if (name == "optcom") {
+      carpetPlot += "carpet_optcom.svg";
+    } else if (name == "denoised") {
+      carpetPlot += "carpet_denoised.svg";
+    } else if (name == "accepted") {
+      carpetPlot += "carpet_accepted.svg";
+    } else if (name == "rejected") {
+      carpetPlot += "carpet_rejected.svg";
+    } else if (name == "denoised_mir") {
+      carpetPlot += "carpet_denoised_mir.svg";
+    } else if (name == "accepted_mir") {
+      carpetPlot += "carpet_accepted_mir.svg";
+    } else if (name == "optcom_nogsr") {
+      carpetPlot += "carpet_optcom_nogsr.svg";
+    }
+
+    // Update the image source
+    document.getElementById("imgCarpetPlot").src = carpetPlot;
+  }
+
+  // Rica modal functions with accessibility support
+  var ricaModalTrigger = null;
+
+  function openRicaModal() {
+    ricaModalTrigger = document.activeElement;
+    var modal = document.getElementById("ricaModal");
+    modal.style.display = "flex";
+    // Focus the close button when modal opens
+    var closeBtn = modal.querySelector(".rica-modal-close");
+    if (closeBtn) closeBtn.focus();
+  }
+
+  function closeRicaModal() {
+    document.getElementById("ricaModal").style.display = "none";
+    // Return focus to the element that opened the modal
+    if (ricaModalTrigger) {
+      ricaModalTrigger.focus();
+      ricaModalTrigger = null;
+    }
+  }
+
+  function openRicaWebsite() {
+    window.open("https://github.com/ME-ICA/rica", "_blank");
+  }
+
+  // Close modal when clicking outside
+  document.getElementById("ricaModal").addEventListener("click", function(event) {
+    if (event.target === this) {
+      closeRicaModal();
+    }
+  });
+
+  // Close modal with Escape key and trap focus within modal
+  document.addEventListener("keydown", function(event) {
+    var modal = document.getElementById("ricaModal");
+    if (modal.style.display !== "flex") return;
+
+    if (event.key === "Escape") {
+      closeRicaModal();
+      return;
+    }
+
+    // Trap focus within modal
+    if (event.key === "Tab") {
+      var focusable = modal.querySelectorAll("button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])");
+      if (!focusable || focusable.length === 0) {
+        return;
+      }
+      var first = focusable[0];
+      var last = focusable[focusable.length - 1];
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+  });
+</script>
+
+<script type="text/javascript">
+(function() {
+  const fn = function() {
+    Bokeh.safely(function() {
+      (function(root) {
+        function embed_document(root) {
+        const docs_json = '{"301a8100-85d7-4a36-902f-30c0ddc99eaf":{"version":"3.8.1","title":"Bokeh Application","config":{"type":"object","name":"DocumentConfig","id":"p5174","attributes":{"notifications":{"type":"object","name":"Notifications","id":"p5175"}}},"roots":[{"type":"object","name":"GridPlot","id":"p5172","attributes":{"rows":null,"cols":null,"toolbar":{"type":"object","name":"Toolbar","id":"p5171","attributes":{"tools":[{"type":"object","name":"ToolProxy","id":"p5164","attributes":{"tools":[{"type":"object","name":"TapTool","id":"p5010","attributes":{"renderers":"auto","mode":"replace"}},{"type":"object","name":"TapTool","id":"p5110","attributes":{"renderers":"auto","mode":"replace"}},{"type":"object","name":"TapTool","id":"p4964","attributes":{"renderers":"auto","mode":"replace"}},{"type":"object","name":"TapTool","id":"p5060","attributes":{"renderers":"auto","mode":"replace"}}]}},{"type":"object","name":"ToolProxy","id":"p5165","attributes":{"tools":[{"type":"object","name":"HoverTool","id":"p5009","attributes":{"renderers":"auto","tooltips":[["Component ID","@component"],["Kappa","@kappa{0.00}"],["Rho","@rho{0.00}"],["Var. Expl.","@varexp{0.00}%"],["Var. Expl. by Rej.","@varexprej{0.00}%"],["Tags","@classtag"]],"sort_by":null}},{"type":"object","name":"HoverTool","id":"p5109","attributes":{"renderers":"auto","tooltips":[["Component ID","@component"],["Kappa","@kappa{0.00}"],["Rho","@rho{0.00}"],["Var. Expl.","@varexp{0.00}%"],["Var. Expl. by Rej.","@varexprej{0.00}%"],["Tags","@classtag"]],"sort_by":null}},{"type":"object","name":"HoverTool","id":"p4963","attributes":{"renderers":"auto","tooltips":[["Component ID","@component"],["Kappa","@kappa{0.00}"],["Rho","@rho{0.00}"],["Var. Expl.","@varexp{0.00}%"],["Var. Expl. by Rej.","@varexprej{0.00}%"],["Tags","@classtag"]],"sort_by":null}},{"type":"object","name":"HoverTool","id":"p5059","attributes":{"renderers":"auto","tooltips":[["Component ID","@component"],["Kappa","@kappa{0.00}"],["Rho","@rho{0.00}"],["Var. Expl.","@varexp{0.00}%"],["Var. Expl. by Rej.","@varexprej{0.00}%"],["Tags","@classtag"]],"sort_by":null}}]}},{"type":"object","name":"ToolProxy","id":"p5166","attributes":{"tools":[{"type":"object","name":"WheelZoomTool","id":"p5033","attributes":{"renderers":"auto"}},{"type":"object","name":"WheelZoomTool","id":"p4987","attributes":{"renderers":"auto"}},{"type":"object","name":"WheelZoomTool","id":"p5083","attributes":{"renderers":"auto"}}]}},{"type":"object","name":"ToolProxy","id":"p5167","attributes":{"tools":[{"type":"object","name":"ResetTool","id":"p5034"},{"type":"object","name":"ResetTool","id":"p4988"},{"type":"object","name":"ResetTool","id":"p5084"}]}},{"type":"object","name":"ToolProxy","id":"p5168","attributes":{"tools":[{"type":"object","name":"PanTool","id":"p5035"},{"type":"object","name":"PanTool","id":"p4989"},{"type":"object","name":"PanTool","id":"p5085"}]}},{"type":"object","name":"ToolProxy","id":"p5169","attributes":{"tools":[{"type":"object","name":"CrosshairTool","id":"p5036"},{"type":"object","name":"CrosshairTool","id":"p4990"},{"type":"object","name":"CrosshairTool","id":"p5086"}]}},{"type":"object","name":"SaveTool","id":"p5170"}],"logo":null}},"toolbar_location":"left","children":[[{"type":"object","name":"Row","id":"p5163","attributes":{"children":[{"type":"object","name":"Column","id":"p5161","attributes":{"children":[{"type":"object","name":"Row","id":"p5159","attributes":{"children":[{"type":"object","name":"Figure","id":"p4965","attributes":{"js_event_callbacks":{"type":"map","entries":[["tap",[{"type":"object","name":"CustomJS","id":"p5155","attributes":{"args":{"type":"map","entries":[["source_comp_table",{"type":"object","name":"ColumnDataSource","id":"p4960","attributes":{"selected":{"type":"object","name":"Selection","id":"p4961","attributes":{"js_property_callbacks":{"type":"map","entries":[["change:indices",[{"id":"p5155"},{"type":"object","name":"CustomJS","id":"p5156","attributes":{"args":{"type":"map","entries":[["source_comp_table",{"id":"p4960"}],["div",{"type":"object","name":"Div","id":"p5154","attributes":{"width":500,"height":750,"height_policy":"fixed"}}],["outdir","/Users/handwerkerd/Documents/code/meica/ohbm-2026-multiecho/five-echo-dataset/tedana_external_regress_processed"],["prefix",""]]},"code":"\\n    // Accessing the selected component ID\\n    var data          = source_comp_table.data;\\n    var selected_idx = source_comp_table.selected.indices;\\n    console.log(&#x27;Selected idx is &#x27; + selected_idx)\\n    if(selected_idx &gt;= 0) {\\n        // A component has been selected\\n        // -----------------------------\\n        var components = data[&#x27;component&#x27;]\\n        var selected = components[selected_idx]\\n        var selected_padded = String(selected).padStart(3,0)\\n        var selected_padded_forIMG = selected_padded\\n        var selected_padded_C = &#x27;ica_&#x27; + selected_padded\\n\\n        // Find color for selected component\\n        var colors = data[&#x27;color&#x27;]\\n        var this_component_color = colors[selected_idx]\\n\\n        // Image Below Plots\\n        div.text = \\"\\"\\n        var line = \\"&lt;span&gt;&lt;img src=&#x27;./figures/\\"+prefix+\\"comp_\\"+selected_padded_forIMG+\\".png&#x27;\\" +\\n            \\" alt=&#x27;Component Map&#x27;&gt;&lt;span&gt;\\\\n\\";\\n        console.log(&#x27;Linea: &#x27; + line)\\n        var text = div.text.concat(line);\\n        var lines = text.split(\\"\\\\n\\")\\n            if (lines.length &gt; 35)\\n                lines.shift();\\n        div.text = lines.join(\\"\\\\n\\");\\n\\n    } else {\\n        // No component has been selected\\n        // ------------------------------\\n        // Set Component color to Black\\n        var this_component_color = &#x27;#000000&#x27;\\n\\n        // Image Below Plots\\n        div.text = \\"\\"\\n        var line = \\"&lt;p&gt;Please select an individual component to view it in more detail&lt;/p&gt;\\\\n\\"\\n        var text = div.text.concat(line);\\n\\n    }\\n    "}},{"type":"object","name":"CustomJS","id":"p5157","attributes":{"args":{"type":"map","entries":[["source_comp_table",{"id":"p4960"}],["div",{"id":"p5154"}],["outdir","/Users/handwerkerd/Documents/code/meica/ohbm-2026-multiecho/five-echo-dataset/tedana_external_regress_processed"],["prefix",""]]},"code":"\\n    // Accessing the selected component ID\\n    var data          = source_comp_table.data;\\n    var selected_idx = source_comp_table.selected.indices;\\n    console.log(&#x27;Selected idx is &#x27; + selected_idx)\\n    if(selected_idx &gt;= 0) {\\n        // A component has been selected\\n        // -----------------------------\\n        var components = data[&#x27;component&#x27;]\\n        var selected = components[selected_idx]\\n        var selected_padded = String(selected).padStart(3,0)\\n        var selected_padded_forIMG = selected_padded\\n        var selected_padded_C = &#x27;ica_&#x27; + selected_padded\\n\\n        // Find color for selected component\\n        var colors = data[&#x27;color&#x27;]\\n        var this_component_color = colors[selected_idx]\\n\\n        // Image Below Plots\\n        div.text = \\"\\"\\n        var line = \\"&lt;span&gt;&lt;img src=&#x27;./figures/\\"+prefix+\\"comp_\\"+selected_padded_forIMG+\\".png&#x27;\\" +\\n            \\" alt=&#x27;Component Map&#x27;&gt;&lt;span&gt;\\\\n\\";\\n        console.log(&#x27;Linea: &#x27; + line)\\n        var text = div.text.concat(line);\\n        var lines = text.split(\\"\\\\n\\")\\n            if (lines.length &gt; 35)\\n                lines.shift();\\n        div.text = lines.join(\\"\\\\n\\");\\n\\n    } else {\\n        // No component has been selected\\n        // ------------------------------\\n        // Set Component color to Black\\n        var this_component_color = &#x27;#000000&#x27;\\n\\n        // Image Below Plots\\n        div.text = \\"\\"\\n        var line = \\"&lt;p&gt;Please select an individual component to view it in more detail&lt;/p&gt;\\\\n\\"\\n        var text = div.text.concat(line);\\n\\n    }\\n    "}},{"type":"object","name":"CustomJS","id":"p5158","attributes":{"args":{"type":"map","entries":[["source_comp_table",{"id":"p4960"}],["div",{"id":"p5154"}],["outdir","/Users/handwerkerd/Documents/code/meica/ohbm-2026-multiecho/five-echo-dataset/tedana_external_regress_processed"],["prefix",""]]},"code":"\\n    // Accessing the selected component ID\\n    var data          = source_comp_table.data;\\n    var selected_idx = source_comp_table.selected.indices;\\n    console.log(&#x27;Selected idx is &#x27; + selected_idx)\\n    if(selected_idx &gt;= 0) {\\n        // A component has been selected\\n        // -----------------------------\\n        var components = data[&#x27;component&#x27;]\\n        var selected = components[selected_idx]\\n        var selected_padded = String(selected).padStart(3,0)\\n        var selected_padded_forIMG = selected_padded\\n        var selected_padded_C = &#x27;ica_&#x27; + selected_padded\\n\\n        // Find color for selected component\\n        var colors = data[&#x27;color&#x27;]\\n        var this_component_color = colors[selected_idx]\\n\\n        // Image Below Plots\\n        div.text = \\"\\"\\n        var line = \\"&lt;span&gt;&lt;img src=&#x27;./figures/\\"+prefix+\\"comp_\\"+selected_padded_forIMG+\\".png&#x27;\\" +\\n            \\" alt=&#x27;Component Map&#x27;&gt;&lt;span&gt;\\\\n\\";\\n        console.log(&#x27;Linea: &#x27; + line)\\n        var text = div.text.concat(line);\\n        var lines = text.split(\\"\\\\n\\")\\n            if (lines.length &gt; 35)\\n                lines.shift();\\n        div.text = lines.join(\\"\\\\n\\");\\n\\n    } else {\\n        // No component has been selected\\n        // ------------------------------\\n        // Set Component color to Black\\n        var this_component_color = &#x27;#000000&#x27;\\n\\n        // Image Below Plots\\n        div.text = \\"\\"\\n        var line = \\"&lt;p&gt;Please select an individual component to view it in more detail&lt;/p&gt;\\\\n\\"\\n        var text = div.text.concat(line);\\n\\n    }\\n    "}}]]]},"indices":[],"line_indices":[]}},"selection_policy":{"type":"object","name":"UnionRenderers","id":"p4962"},"data":{"type":"map","entries":[["kappa",{"type":"ndarray","array":{"type":"bytes","data":"H4sIAAEAAAAC/wFIAbf+Ilez++1QREBmFLSFvDhRQMwner9PIlBAlzljT6lGR0DcLOE5DQNOQAH49IWiNU1Au+nqN9BbTkDQAfz0DjxRQFppa9nooUtAgogE3Oz9UEBBvuWjr85TQHPRDlOQ51hA2c+/pBuvWkA0P66sgDNSQJLnxeRUwVRAJy7fA08YXUDJEU+65mJbQIIijyXA01lAmVs6kywhYEBJL27sybVUQNRUD0kBvVtAwKWCi+0LM0BOPijnprc1QFCUNTMv/DVANxjQk/iRO0A8lIAiZRk+QA82BbsCWj5AvOnAkUEPNECz4CUO0BY9QLRDUC81IjRAYrwxyJA2RED9+UEGfdc3QHj3c+ZamDhApIbwCHWeO0DF85QWClpJQAid33T5kTVABNhf1p8wPkAWdH+rp7VfQHNDPWUAl0BAAjdQp5EwYUAEtre4ZC8+QDVcPXhIAQAA"},"shape":[41],"dtype":"float64","order":"little"}],["rho",{"type":"ndarray","array":{"type":"bytes","data":"H4sIAAEAAAAC/wFIAbf+dlagi4eXLUB2lQlXd9ctQAsAoDujqS1AW7MSYm8JMEDK8G9SDqksQCedV8n66S9A7COUSI80LEBto+ezjD8yQOQqGrdDaDFAEJNQmbRIMUCo/Wf4yRcwQKKHPMLTKDFAuR3fJJqAMkASp7z1qdsuQDIVrbblUzBA0EqeH8sjNED/bBnNtxgwQCFtXf7MHTJA3ILJ5f8wMUDM7DAVRbsyQEAz3Xf7HzJA2cuj9AglNUAPUGo0DGwtQIEBNj3tZi1AaoayFVqOKkBPxabROaQxQIo0B1UNrStA8sEBAUopNECXTvpr/TgqQDFwsbrJTC5AxgnXRmTUQEALyLu1lM49QGxiQlRxfDxAdc55Rh/9K0D+237EIBU8QIO1GNjKHDhAhcrU8awjOUAaTjx4bbMzQGMC37HORjRAJGUxnnHsPECJsgwMtXgwQAMv3/RIAQAA"},"shape":[41],"dtype":"float64","order":"little"}],["varexp",{"type":"ndarray","array":{"type":"bytes","data":"H4sIAAEAAAAC/wFIAbf+KGWbQ9/Pwz+wMcEUizTMPzhQ94M8aNA/VHCENBGA0z82eaGJsozUP/4NTuz/z9U/vS4Crc3i1T9Ibb4DwWzYP5poeB2Ct9g/KpSazyQY2j/uxIba1sXePwFp1iP7SeA/H4kK7f5M4j8lUG5TcJTjPxlHKQu4yuM/pmILEabZ5T+dkxp4DwLnP+meE6t/k+8/OGLuwE4S8j9XroxSBoP1Pzyyd9zF5vw/3CMx+NTmwj/Xaf/kTgLFP5zHNi5KjMU/N3/g83U/yT88SBJ+4QTPPxDUiXQwWc8/ho56Fc8q0T+kYXZDWxjTP9IuytKfBuY/swJ0kQem5z/IcPGzOw3oP9x6Nhor5ug/SJB0J/M06T+6rY9dK1fuP1qhiVOe2/A/hbWEAnyb8j+vj7cP82sBQAF4m6mzJhhAIZovORP8IkAXCZ8BlIlOQIzkGqBIAQAA"},"shape":[41],"dtype":"float64","order":"little"}],["varexprej",{"type":"ndarray","array":{"type":"bytes","data":"H4sIAAEAAAAC/3vcs++/nIahw6U1RQG8G40cuCq7/V6WGTsEv7UI1jA0c8h/4anmPcnGYfbcyP6Q9RYOBnaOq3fNMneIKg9fHN5r6bDBfGVAcbWeg9POOyWZvUYOKpq+LYnXDBzeVDWIe2gZOswuPizVLaXtkCd5fe/BNzYOrn+jQ5mZ7RxiGlYvvXvezuGG8abeL712Djzrw7cLzLZ2qCvLUvjabuKg5/dH64aGhcMrw9bTeu42Dgxg8KN+sNIAWOlu2EgBAAA="},"shape":[41],"dtype":"float64","order":"little"}],["kappa_rank",{"type":"ndarray","array":{"type":"bytes","data":"H4sIAAEAAAAC/zXMOwrCQBSG0VtaWlhYWEgIIiKiJpr4zPhYWJbsEkRzZprDd/mZiN9r05/YcMeGFWvuueaBWy5ZcMYVS4455ZzBBSeD/ZtPd/ZJ33mhfXR2L33SD53N/xyZ91eOeOanG7ylL46mlf9IAQAA"},"shape":[41],"dtype":"float64","order":"little"}],["rho_rank",{"type":"ndarray","array":{"type":"bytes","data":"H4sIAAEAAAAC/zXPuwrCUAwG4IyODg4ODlKKiIiorbZee7w8WB/ZR1Dsd7J8/AmBJOJXfUrxr445X/jkdbDPecOKNc88cs0bWy544o4HrrjlnA93MN7c67/kUs7zOz9deHRgzLw34YxTLllwxCZ9AUxh+wZIAQAA"},"shape":[41],"dtype":"float64","order":"little"}],["varexp_rank",{"type":"ndarray","array":{"type":"bytes","data":"H4sIAAEAAAAC/zXPOw6CUBQE0FdaWlhYWBhiCDHECH7AH+BnYW/JLoEo593mZKaaG8LvPsOf8JqMg9zxwTtvvPLClg3PPPHIA2vuueGaSy7ssjO+9Yxp91OfTH/0rLhjyS0L5sy44pwzBn77EcDRgH9IAQAA"},"shape":[41],"dtype":"float64","order":"little"}],["component",["9","10","6","26","32","20","25","30","0","15","37","13","29","1","22","23","8","40","2","19","27","33","5","38","11","4","39","21","36","18","14","28","16","24","12","3","7","17","35","31","34"]],["color",{"type":"ndarray","array":["#2ecc71","#2ecc71","#2ecc71","#2ecc71","#2ecc71","#2ecc71","#2ecc71","#2ecc71","#2ecc71","#2ecc71","#2ecc71","#2ecc71","#2ecc71","#2ecc71","#2ecc71","#2ecc71","#2ecc71","#2ecc71","#2ecc71","#2ecc71","#2ecc71","#e74c3c","#e74c3c","#e74c3c","#e74c3c","#e74c3c","#e74c3c","#e74c3c","#e74c3c","#e74c3c","#e74c3c","#e74c3c","#e74c3c","#e74c3c","#e74c3c","#e74c3c","#e74c3c","#e74c3c","#e74c3c","#e74c3c","#e74c3c"],"shape":[41],"dtype":"object","order":"little"}],["size",{"type":"ndarray","array":{"type":"bytes","data":"H4sIAAEAAAAC/1Na7j7tJaOAw4IdAqu6hQUcMmr3dVnJCjis4Vgz21JLwGFicV7QIj0BB9GiTwc+GAs48L8VPmxvIuAg+0dv/Ss7AYcqPvcTKg4CDi9vfS575yrgMIXR9N60SAEHW2aPaTqJAg4LazoaRIoEHKTc4zWv1Ag4fFHe4TunTsDBvmdixIt+AQeveyY2i2cKONzryti3+KGAQ+P12GQWDkGHKxu8+685CjqY6z0V5dwn6MAABgIOWmvq43JZBBy+q0g79LMKODz1YVYK5RVwyFtz9X+JpIBD7KSLcmpSAg53O3eL5igIOJjcOHi9VUPA4WGypk/SRAEHt/+pqqzzBRx6RNKyMhYJOPz4fyenfSXQ/akLymTXCDgc8nevcrwO9Nccx2XzPgs4zLxR+5JVUNChK/fclGeKQg4q8YxnXuuLOezJ9N396IIk1F0mDgBZmmFLSAEAAA=="},"shape":[41],"dtype":"float64","order":"little"}],["classif",{"type":"ndarray","array":["accepted","accepted","accepted","accepted","accepted","accepted","accepted","accepted","accepted","accepted","accepted","accepted","accepted","accepted","accepted","accepted","accepted","accepted","accepted","accepted","accepted","rejected","rejected","rejected","rejected","rejected","rejected","rejected","rejected","rejected","rejected","rejected","rejected","rejected","rejected","rejected","rejected","rejected","rejected","rejected","rejected"],"shape":[41],"dtype":"object","order":"little"}],["classtag",{"type":"ndarray","array":["Likely BOLD","Likely BOLD","Likely BOLD","Likely BOLD","Likely BOLD","Likely BOLD","Likely BOLD","Likely BOLD","Likely BOLD","Likely BOLD","Likely BOLD","Likely BOLD","Likely BOLD","Likely BOLD","Likely BOLD","Likely BOLD","Likely BOLD","Likely BOLD","Likely BOLD","Likely BOLD","Likely BOLD","Unlikely BOLD","Unlikely BOLD","Unlikely BOLD","Unlikely BOLD","Unlikely BOLD","Unlikely BOLD","Unlikely BOLD","Unlikely BOLD","Unlikely BOLD,Fits CSF external regressors,External regressors,Fits motion external regressors","Unlikely BOLD,Fits CSF external regressors,External regressors,Fits motion external regressors","Unlikely BOLD","Unlikely BOLD,Fits CSF external regressors,External regressors,Fits motion external regressors","Unlikely BOLD,Fits CSF external regressors,External regressors,Fits motion external regressors","Unlikely BOLD,Fits CSF external regressors,External regressors,Fits motion external regressors","Unlikely BOLD","Unlikely BOLD,Fits CSF external regressors,External regressors,Fits motion external regressors","Unlikely BOLD,Likely BOLD,Fits CSF external regressors,External regressors,Fits motion external regressors","Unlikely BOLD,Fits CSF external regressors,External regressors,Fits motion external regressors","Unlikely BOLD,Likely BOLD,Fits CSF external regressors,External regressors,Fits motion external regressors","Unlikely BOLD,Fits CSF external regressors,External regressors,Fits motion external regressors"],"shape":[41],"dtype":"object","order":"little"}],["angle",{"type":"ndarray","array":{"type":"bytes","data":"H4sIAAEAAAAC/wFIAbf+sNgCT83qgz+W/BDA4VqMP03ShcWJfpA/1JXzxZKakz+9ASs/oaiUP+7YXBam7ZU/MsNBZo0Alj8wLVcy9I2YP++djuga2Zg/so9k7pw7mj+cNjT3qu+ePwkUVkUfYKA/O+bdGd9loj8Xi5+VDa+jP69lYxWf5aM/r9axWFn3pT+U+BSnVSGnPw/Rt1Nrvq8/Uu/YJ98qsj8HO1/bQ6C1PwSn5soODr0/gujaP4YAgz9NPe133R6FP2lKCE+UqYU/ZELIisdhiT+k/YRLCy+PPx1vENvMg48/6UgO0SRCkT/ORFrcTzKTPzoOvzyQJKY/1IBKoSzGpz9V4OEL7S2oP068w1EDCKk/w6TWdDZXqT9aehcMaYCuP9m09WqI8rA/VhpG38a0sj/q+3NWoYPBP9Hm7p+HR9g/bsvnYOEV4z8hlAs1FrMOQFLUithIAQAA"},"shape":[41],"dtype":"float64","order":"little"}]]}}}],["div",{"id":"p5154"}],["outdir","/Users/handwerkerd/Documents/code/meica/ohbm-2026-multiecho/five-echo-dataset/tedana_external_regress_processed"],["prefix",""]]},"code":"\\n    // Accessing the selected component ID\\n    var data          = source_comp_table.data;\\n    var selected_idx = source_comp_table.selected.indices;\\n    console.log(&#x27;Selected idx is &#x27; + selected_idx)\\n    if(selected_idx &gt;= 0) {\\n        // A component has been selected\\n        // -----------------------------\\n        var components = data[&#x27;component&#x27;]\\n        var selected = components[selected_idx]\\n        var selected_padded = String(selected).padStart(3,0)\\n        var selected_padded_forIMG = selected_padded\\n        var selected_padded_C = &#x27;ica_&#x27; + selected_padded\\n\\n        // Find color for selected component\\n        var colors = data[&#x27;color&#x27;]\\n        var this_component_color = colors[selected_idx]\\n\\n        // Image Below Plots\\n        div.text = \\"\\"\\n        var line = \\"&lt;span&gt;&lt;img src=&#x27;./figures/\\"+prefix+\\"comp_\\"+selected_padded_forIMG+\\".png&#x27;\\" +\\n            \\" alt=&#x27;Component Map&#x27;&gt;&lt;span&gt;\\\\n\\";\\n        console.log(&#x27;Linea: &#x27; + line)\\n        var text = div.text.concat(line);\\n        var lines = text.split(\\"\\\\n\\")\\n            if (lines.length &gt; 35)\\n                lines.shift();\\n        div.text = lines.join(\\"\\\\n\\");\\n\\n    } else {\\n        // No component has been selected\\n        // ------------------------------\\n        // Set Component color to Black\\n        var this_component_color = &#x27;#000000&#x27;\\n\\n        // Image Below Plots\\n        div.text = \\"\\"\\n        var line = \\"&lt;p&gt;Please select an individual component to view it in more detail&lt;/p&gt;\\\\n\\"\\n        var text = div.text.concat(line);\\n\\n    }\\n    "}}]]]},"width":400,"height":400,"x_range":{"type":"object","name":"DataRange1d","id":"p4966"},"y_range":{"type":"object","name":"DataRange1d","id":"p4967"},"x_scale":{"type":"object","name":"LinearScale","id":"p4975"},"y_scale":{"type":"object","name":"LinearScale","id":"p4976"},"title":{"type":"object","name":"Title","id":"p4968","attributes":{"text":"Kappa / Rho Plot"}},"renderers":[{"type":"object","name":"GlyphRenderer","id":"p4999","attributes":{"data_source":{"id":"p4960"},"view":{"type":"object","name":"CDSView","id":"p5000","attributes":{"filter":{"type":"object","name":"AllIndices","id":"p5001"}}},"glyph":{"type":"object","name":"Scatter","id":"p4996","attributes":{"x":{"type":"field","field":"kappa"},"y":{"type":"field","field":"rho"},"size":{"type":"field","field":"size"},"line_color":{"type":"field","field":"color"},"line_alpha":{"type":"value","value":0.5},"fill_color":{"type":"field","field":"color"},"fill_alpha":{"type":"value","value":0.5},"hatch_color":{"type":"field","field":"color"},"hatch_alpha":{"type":"value","value":0.5}}},"nonselection_glyph":{"type":"object","name":"Scatter","id":"p4997","attributes":{"x":{"type":"field","field":"kappa"},"y":{"type":"field","field":"rho"},"size":{"type":"field","field":"size"},"line_color":{"type":"field","field":"color"},"line_alpha":{"type":"value","value":0.1},"fill_color":{"type":"field","field":"color"},"fill_alpha":{"type":"value","value":0.1},"hatch_color":{"type":"field","field":"color"},"hatch_alpha":{"type":"value","value":0.1}}},"muted_glyph":{"type":"object","name":"Scatter","id":"p4998","attributes":{"x":{"type":"field","field":"kappa"},"y":{"type":"field","field":"rho"},"size":{"type":"field","field":"size"},"line_color":{"type":"field","field":"color"},"line_alpha":{"type":"value","value":0.2},"fill_color":{"type":"field","field":"color"},"fill_alpha":{"type":"value","value":0.2},"hatch_color":{"type":"field","field":"color"},"hatch_alpha":{"type":"value","value":0.2}}}}}],"toolbar":{"type":"object","name":"Toolbar","id":"p4974","attributes":{"tools":[{"id":"p4964"},{"id":"p4963"},{"id":"p4987"},{"id":"p4988"},{"id":"p4989"},{"id":"p4990"},{"type":"object","name":"SaveTool","id":"p4991"}],"logo":null}},"toolbar_location":null,"left":[{"type":"object","name":"LinearAxis","id":"p4982","attributes":{"ticker":{"type":"object","name":"BasicTicker","id":"p4983","attributes":{"mantissas":[1,2,5]}},"formatter":{"type":"object","name":"BasicTickFormatter","id":"p4984"},"axis_label":"Rho","major_label_policy":{"type":"object","name":"AllLabels","id":"p4985"}}}],"below":[{"type":"object","name":"LinearAxis","id":"p4977","attributes":{"ticker":{"type":"object","name":"BasicTicker","id":"p4978","attributes":{"mantissas":[1,2,5]}},"formatter":{"type":"object","name":"BasicTickFormatter","id":"p4979"},"axis_label":"Kappa","major_label_policy":{"type":"object","name":"AllLabels","id":"p4980"}}}],"center":[{"type":"object","name":"Grid","id":"p4981","attributes":{"axis":{"id":"p4977"}}},{"type":"object","name":"Grid","id":"p4986","attributes":{"dimension":1,"axis":{"id":"p4982"}}},{"type":"object","name":"Slope","id":"p4992","attributes":{"gradient":1,"y_intercept":0,"line_color":"#D3D3D3"}},{"type":"object","name":"Legend","id":"p5002","attributes":{"orientation":"horizontal","border_line_alpha":0,"background_fill_alpha":0.5,"items":[{"type":"object","name":"LegendItem","id":"p5003","attributes":{"label":{"type":"value","value":"accepted"},"renderers":[{"id":"p4999"}],"index":0}},{"type":"object","name":"LegendItem","id":"p5004","attributes":{"label":{"type":"value","value":"rejected"},"renderers":[{"id":"p4999"}],"index":21}}]}},{"type":"object","name":"Span","id":"p5005","attributes":{"name":"rho elbow","location":20.276591412492404,"line_color":"#000033","line_alpha":0.75,"line_dash":[6]}},{"type":"object","name":"Label","id":"p5006","attributes":{"text":"rho elbow","text_color":"#000033","text_alpha":0.75,"text_font_size":"10px","x":300,"y":20.682123240742254,"x_units":"screen"}},{"type":"object","name":"Span","id":"p5007","attributes":{"name":"kappa elbow","location":33.17969956866627,"dimension":"height","line_color":"#000033","line_alpha":0.75,"line_dash":[6]}},{"type":"object","name":"Label","id":"p5008","attributes":{"text":"kappa elbow","text_color":"#000033","text_alpha":0.75,"text_font_size":"10px","x":33.8432935600396,"y":300,"y_units":"screen"}}]}},{"type":"object","name":"Figure","id":"p5111","attributes":{"js_event_callbacks":{"type":"map","entries":[["tap",[{"type":"object","name":"CustomJS","id":"p5153","attributes":{"args":{"type":"map","entries":[["source",{"id":"p4960"}]]},"code":"\\n        if (window._tedana_key_handler_added) {\\n            return;\\n        }\\n        window._tedana_key_handler_added = true;\\n\\n        document.addEventListener(&#x27;keydown&#x27;, function(e) {\\n            const key = e.key;\\n            const N = source.get_length();\\n            if (!N) return;\\n\\n            let idx = 0;\\n            if (source.selected.indices.length &gt; 0) {\\n                idx = source.selected.indices[0];\\n            }\\n\\n            if (key === \\"ArrowLeft\\") {\\n                idx = (idx + 1) % N;\\n            } else if (key === \\"ArrowRight\\") {\\n                idx = (idx - 1 + N) % N;\\n            } else {\\n                return;\\n            }\\n\\n            source.selected.indices = [idx];\\n            source.change.emit();\\n        });\\n    "}},{"id":"p5158"}]]]},"width":400,"height":400,"x_range":{"type":"object","name":"DataRange1d","id":"p5112"},"y_range":{"type":"object","name":"DataRange1d","id":"p5113"},"x_scale":{"type":"object","name":"LinearScale","id":"p5121"},"y_scale":{"type":"object","name":"LinearScale","id":"p5122"},"title":{"type":"object","name":"Title","id":"p5114","attributes":{"text":"Variance Explained View"}},"renderers":[{"type":"object","name":"GlyphRenderer","id":"p5142","attributes":{"data_source":{"id":"p4960"},"view":{"type":"object","name":"CDSView","id":"p5143","attributes":{"filter":{"type":"object","name":"AllIndices","id":"p5144"}}},"glyph":{"type":"object","name":"Wedge","id":"p5139","attributes":{"x":{"type":"value","value":0},"y":{"type":"value","value":1},"radius":{"type":"value","value":0.9},"start_angle":{"type":"expr","expr":{"type":"object","name":"CumSum","id":"p5134","attributes":{"field":"angle","include_zero":true}}},"end_angle":{"type":"expr","expr":{"type":"object","name":"CumSum","id":"p5135","attributes":{"field":"angle"}}},"line_color":{"type":"value","value":"white"},"fill_color":{"type":"field","field":"color"},"fill_alpha":{"type":"value","value":0.7}}},"nonselection_glyph":{"type":"object","name":"Wedge","id":"p5140","attributes":{"x":{"type":"value","value":0},"y":{"type":"value","value":1},"radius":{"type":"value","value":0.9},"start_angle":{"type":"expr","expr":{"id":"p5134"}},"end_angle":{"type":"expr","expr":{"id":"p5135"}},"line_color":{"type":"value","value":"white"},"line_alpha":{"type":"value","value":0.1},"fill_color":{"type":"field","field":"color"},"fill_alpha":{"type":"value","value":0.1},"hatch_alpha":{"type":"value","value":0.1}}},"muted_glyph":{"type":"object","name":"Wedge","id":"p5141","attributes":{"x":{"type":"value","value":0},"y":{"type":"value","value":1},"radius":{"type":"value","value":0.9},"start_angle":{"type":"expr","expr":{"id":"p5134"}},"end_angle":{"type":"expr","expr":{"id":"p5135"}},"line_color":{"type":"value","value":"white"},"line_alpha":{"type":"value","value":0.2},"fill_color":{"type":"field","field":"color"},"fill_alpha":{"type":"value","value":0.2},"hatch_alpha":{"type":"value","value":0.2}}}}},{"type":"object","name":"GlyphRenderer","id":"p5149","attributes":{"data_source":{"type":"object","name":"ColumnDataSource","id":"p5146","attributes":{"selected":{"type":"object","name":"Selection","id":"p5147","attributes":{"indices":[],"line_indices":[]}},"selection_policy":{"type":"object","name":"UnionRenderers","id":"p5148"},"data":{"type":"map"}}},"view":{"type":"object","name":"CDSView","id":"p5150","attributes":{"filter":{"type":"object","name":"AllIndices","id":"p5151"}}},"glyph":{"type":"object","name":"Scatter","id":"p5145","attributes":{"x":{"type":"value","value":0},"y":{"type":"value","value":1},"size":{"type":"value","value":150},"line_color":{"type":"value","value":"white"},"fill_color":{"type":"value","value":"white"}}}}}],"toolbar":{"type":"object","name":"Toolbar","id":"p5120","attributes":{"tools":[{"id":"p5109"},{"id":"p5110"},{"type":"object","name":"SaveTool","id":"p5133"}],"logo":null}},"toolbar_location":null,"left":[{"type":"object","name":"LinearAxis","id":"p5128","attributes":{"visible":false,"ticker":{"type":"object","name":"BasicTicker","id":"p5129","attributes":{"mantissas":[1,2,5]}},"formatter":{"type":"object","name":"BasicTickFormatter","id":"p5130"},"major_label_policy":{"type":"object","name":"AllLabels","id":"p5131"}}}],"below":[{"type":"object","name":"LinearAxis","id":"p5123","attributes":{"visible":false,"ticker":{"type":"object","name":"BasicTicker","id":"p5124","attributes":{"mantissas":[1,2,5]}},"formatter":{"type":"object","name":"BasicTickFormatter","id":"p5125"},"major_label_policy":{"type":"object","name":"AllLabels","id":"p5126"}}}],"center":[{"type":"object","name":"Grid","id":"p5127","attributes":{"visible":false,"axis":{"id":"p5123"}}},{"type":"object","name":"Grid","id":"p5132","attributes":{"visible":false,"dimension":1,"axis":{"id":"p5128"}}},{"type":"object","name":"Label","id":"p5152","attributes":{"text":"Total: 41\\nAccept: 21/12.6%\\nReject: 20/87.4%","text_font_size":"12pt","text_align":"center","text_baseline":"middle","x":0,"y":1}}]}}]}},{"type":"object","name":"Row","id":"p5160","attributes":{"children":[{"type":"object","name":"Figure","id":"p5061","attributes":{"js_event_callbacks":{"type":"map","entries":[["tap",[{"id":"p5157"}]]]},"width":400,"height":400,"x_range":{"type":"object","name":"Range1d","id":"p5106","attributes":{"start":-1,"end":42}},"y_range":{"type":"object","name":"DataRange1d","id":"p5063"},"x_scale":{"type":"object","name":"LinearScale","id":"p5071"},"y_scale":{"type":"object","name":"LinearScale","id":"p5072"},"title":{"type":"object","name":"Title","id":"p5064","attributes":{"text":"Rho Rank"}},"renderers":[{"type":"object","name":"GlyphRenderer","id":"p5094","attributes":{"data_source":{"type":"object","name":"ColumnDataSource","id":"p5088","attributes":{"selected":{"type":"object","name":"Selection","id":"p5089","attributes":{"indices":[],"line_indices":[]}},"selection_policy":{"type":"object","name":"UnionRenderers","id":"p5090"},"data":{"type":"map","entries":[["x",{"type":"ndarray","array":{"type":"bytes","data":"H4sIAAEAAAAC/w3DiRKBUAAAwFcSUsrR4UgI5f9/0O7MRiGE2IWJS1NXrt2YuTW3cGdp5d6DR0/WNrZ2nr149Wbv3cGHT1+Ovv34dXL25x8BB0LjpAAAAA=="},"shape":[41],"dtype":"int32","order":"little"}],["y",{"type":"ndarray","array":{"type":"bytes","data":"H4sIAAEAAAAC/wFIAbf+xgnXRmTUQEALyLu1lM49QCRlMZ5x7DxAbGJCVHF8PED+237EIBU8QIXK1PGsIzlAg7UY2MocOEDZy6P0CCU1QGMC37HORjRA8sEBAUopNEDQSp4fyyM0QBpOPHhtszNAzOwwFUW7MkC5Hd8kmoAyQG2j57OMPzJAQDPdd/sfMkAhbV3+zB0yQE/FptE5pDFA5Coat0NoMUAQk1CZtEgxQNyCyeX/MDFAooc8wtMoMUCJsgwMtXgwQDIVrbblUzBA/2wZzbcYMECo/Wf4yRcwQFuzEmJvCTBAJ51XyfrpL0ASp7z1qdsuQDFwsbrJTC5AdpUJV3fXLUALAKA7o6ktQHZWoIuHly1AD1BqNAxsLUCBATY97WYtQMrwb1IOqSxA7COUSI80LEB1znlGH/0rQIo0B1UNrStAaoayFVqOKkCXTvpr/TgqQKGXTBZIAQAA"},"shape":[41],"dtype":"float64","order":"little"}]]}}},"view":{"type":"object","name":"CDSView","id":"p5095","attributes":{"filter":{"type":"object","name":"AllIndices","id":"p5096"}}},"glyph":{"type":"object","name":"Line","id":"p5091","attributes":{"x":{"type":"field","field":"x"},"y":{"type":"field","field":"y"}}},"nonselection_glyph":{"type":"object","name":"Line","id":"p5092","attributes":{"x":{"type":"field","field":"x"},"y":{"type":"field","field":"y"},"line_alpha":0.1}},"muted_glyph":{"type":"object","name":"Line","id":"p5093","attributes":{"x":{"type":"field","field":"x"},"y":{"type":"field","field":"y"},"line_alpha":0.2}}}},{"type":"object","name":"GlyphRenderer","id":"p5103","attributes":{"data_source":{"id":"p4960"},"view":{"type":"object","name":"CDSView","id":"p5104","attributes":{"filter":{"type":"object","name":"AllIndices","id":"p5105"}}},"glyph":{"type":"object","name":"Scatter","id":"p5100","attributes":{"x":{"type":"field","field":"rho_rank"},"y":{"type":"field","field":"rho"},"size":{"type":"value","value":5},"line_color":{"type":"field","field":"color"},"line_alpha":{"type":"value","value":0.7},"fill_color":{"type":"field","field":"color"},"fill_alpha":{"type":"value","value":0.7},"hatch_color":{"type":"field","field":"color"},"hatch_alpha":{"type":"value","value":0.7}}},"nonselection_glyph":{"type":"object","name":"Scatter","id":"p5101","attributes":{"x":{"type":"field","field":"rho_rank"},"y":{"type":"field","field":"rho"},"size":{"type":"value","value":5},"line_color":{"type":"field","field":"color"},"line_alpha":{"type":"value","value":0.1},"fill_color":{"type":"field","field":"color"},"fill_alpha":{"type":"value","value":0.1},"hatch_color":{"type":"field","field":"color"},"hatch_alpha":{"type":"value","value":0.1}}},"muted_glyph":{"type":"object","name":"Scatter","id":"p5102","attributes":{"x":{"type":"field","field":"rho_rank"},"y":{"type":"field","field":"rho"},"size":{"type":"value","value":5},"line_color":{"type":"field","field":"color"},"line_alpha":{"type":"value","value":0.2},"fill_color":{"type":"field","field":"color"},"fill_alpha":{"type":"value","value":0.2},"hatch_color":{"type":"field","field":"color"},"hatch_alpha":{"type":"value","value":0.2}}}}}],"toolbar":{"type":"object","name":"Toolbar","id":"p5070","attributes":{"tools":[{"id":"p5060"},{"id":"p5059"},{"id":"p5083"},{"id":"p5084"},{"id":"p5085"},{"id":"p5086"},{"type":"object","name":"SaveTool","id":"p5087"}],"logo":null}},"toolbar_location":null,"left":[{"type":"object","name":"LinearAxis","id":"p5078","attributes":{"ticker":{"type":"object","name":"BasicTicker","id":"p5079","attributes":{"mantissas":[1,2,5]}},"formatter":{"type":"object","name":"BasicTickFormatter","id":"p5080"},"axis_label":"Rho","major_label_policy":{"type":"object","name":"AllLabels","id":"p5081"}}}],"below":[{"type":"object","name":"LinearAxis","id":"p5073","attributes":{"ticker":{"type":"object","name":"BasicTicker","id":"p5074","attributes":{"mantissas":[1,2,5]}},"formatter":{"type":"object","name":"BasicTickFormatter","id":"p5075"},"axis_label":"Components sorted by Rho","major_label_policy":{"type":"object","name":"AllLabels","id":"p5076"}}}],"center":[{"type":"object","name":"Grid","id":"p5077","attributes":{"axis":{"id":"p5073"}}},{"type":"object","name":"Grid","id":"p5082","attributes":{"dimension":1,"axis":{"id":"p5078"}}},{"type":"object","name":"Span","id":"p5107","attributes":{"name":"elbow","location":20.276591412492404,"line_color":"#000033","line_alpha":0.75,"line_dash":[6]}},{"type":"object","name":"Label","id":"p5108","attributes":{"text":"elbow","text_color":"#000033","text_alpha":0.75,"text_font_size":"10px","x":20,"y":20.682123240742254,"x_units":"screen"}}]}},{"type":"object","name":"Figure","id":"p5011","attributes":{"js_event_callbacks":{"type":"map","entries":[["tap",[{"id":"p5156"}]]]},"width":400,"height":400,"x_range":{"type":"object","name":"Range1d","id":"p5056","attributes":{"start":-1,"end":42}},"y_range":{"type":"object","name":"DataRange1d","id":"p5013"},"x_scale":{"type":"object","name":"LinearScale","id":"p5021"},"y_scale":{"type":"object","name":"LinearScale","id":"p5022"},"title":{"type":"object","name":"Title","id":"p5014","attributes":{"text":"Kappa Rank"}},"renderers":[{"type":"object","name":"GlyphRenderer","id":"p5044","attributes":{"data_source":{"type":"object","name":"ColumnDataSource","id":"p5038","attributes":{"selected":{"type":"object","name":"Selection","id":"p5039","attributes":{"indices":[],"line_indices":[]}},"selection_policy":{"type":"object","name":"UnionRenderers","id":"p5040"},"data":{"type":"map","entries":[["x",{"type":"ndarray","array":{"type":"bytes","data":"H4sIAAEAAAAC/w3DiRKBUAAAwFcSUsrR4UgI5f9/0O7MRiGE2IWJS1NXrt2YuTW3cGdp5d6DR0/WNrZ2nr149Wbv3cGHT1+Ovv34dXL25x8BB0LjpAAAAA=="},"shape":[41],"dtype":"int32","order":"little"}],["y",{"type":"ndarray","array":{"type":"bytes","data":"H4sIAAEAAAAC/wFIAbf+AjdQp5EwYUCZWzqTLCFgQBZ0f6untV9AJy7fA08YXUDUVA9JAb1bQMkRT7rmYltA2c+/pBuvWkCCIo8lwNNZQHPRDlOQ51hAkufF5FTBVEBJL27sybVUQEG+5aOvzlNAND+urIAzUkDQAfz0DjxRQGYUtIW8OFFAgogE3Oz9UEDMJ3q/TyJQQLvp6jfQW05A3CzhOQ0DTkAB+PSFojVNQFppa9nooUtAxfOUFgpaSUCXOWNPqUZHQCJXs/vtUERAYrwxyJA2REBzQz1lAJdAQA82BbsCWj5ABNhf1p8wPkAEtre4ZC8+QDyUgCJlGT5As+AlDtAWPUCkhvAIdZ47QDcY0JP4kTtAePdz5lqYOED9+UEGfdc3QFCUNTMv/DVATj4o56a3NUAInd90+ZE1QLRDUC81IjRAvOnAkUEPNEDApYKL7QszQDYXDwdIAQAA"},"shape":[41],"dtype":"float64","order":"little"}]]}}},"view":{"type":"object","name":"CDSView","id":"p5045","attributes":{"filter":{"type":"object","name":"AllIndices","id":"p5046"}}},"glyph":{"type":"object","name":"Line","id":"p5041","attributes":{"x":{"type":"field","field":"x"},"y":{"type":"field","field":"y"}}},"nonselection_glyph":{"type":"object","name":"Line","id":"p5042","attributes":{"x":{"type":"field","field":"x"},"y":{"type":"field","field":"y"},"line_alpha":0.1}},"muted_glyph":{"type":"object","name":"Line","id":"p5043","attributes":{"x":{"type":"field","field":"x"},"y":{"type":"field","field":"y"},"line_alpha":0.2}}}},{"type":"object","name":"GlyphRenderer","id":"p5053","attributes":{"data_source":{"id":"p4960"},"view":{"type":"object","name":"CDSView","id":"p5054","attributes":{"filter":{"type":"object","name":"AllIndices","id":"p5055"}}},"glyph":{"type":"object","name":"Scatter","id":"p5050","attributes":{"x":{"type":"field","field":"kappa_rank"},"y":{"type":"field","field":"kappa"},"size":{"type":"value","value":5},"line_color":{"type":"field","field":"color"},"line_alpha":{"type":"value","value":0.7},"fill_color":{"type":"field","field":"color"},"fill_alpha":{"type":"value","value":0.7},"hatch_color":{"type":"field","field":"color"},"hatch_alpha":{"type":"value","value":0.7}}},"nonselection_glyph":{"type":"object","name":"Scatter","id":"p5051","attributes":{"x":{"type":"field","field":"kappa_rank"},"y":{"type":"field","field":"kappa"},"size":{"type":"value","value":5},"line_color":{"type":"field","field":"color"},"line_alpha":{"type":"value","value":0.1},"fill_color":{"type":"field","field":"color"},"fill_alpha":{"type":"value","value":0.1},"hatch_color":{"type":"field","field":"color"},"hatch_alpha":{"type":"value","value":0.1}}},"muted_glyph":{"type":"object","name":"Scatter","id":"p5052","attributes":{"x":{"type":"field","field":"kappa_rank"},"y":{"type":"field","field":"kappa"},"size":{"type":"value","value":5},"line_color":{"type":"field","field":"color"},"line_alpha":{"type":"value","value":0.2},"fill_color":{"type":"field","field":"color"},"fill_alpha":{"type":"value","value":0.2},"hatch_color":{"type":"field","field":"color"},"hatch_alpha":{"type":"value","value":0.2}}}}}],"toolbar":{"type":"object","name":"Toolbar","id":"p5020","attributes":{"tools":[{"id":"p5010"},{"id":"p5009"},{"id":"p5033"},{"id":"p5034"},{"id":"p5035"},{"id":"p5036"},{"type":"object","name":"SaveTool","id":"p5037"}],"logo":null}},"toolbar_location":null,"left":[{"type":"object","name":"LinearAxis","id":"p5028","attributes":{"ticker":{"type":"object","name":"BasicTicker","id":"p5029","attributes":{"mantissas":[1,2,5]}},"formatter":{"type":"object","name":"BasicTickFormatter","id":"p5030"},"axis_label":"Kappa","major_label_policy":{"type":"object","name":"AllLabels","id":"p5031"}}}],"below":[{"type":"object","name":"LinearAxis","id":"p5023","attributes":{"ticker":{"type":"object","name":"BasicTicker","id":"p5024","attributes":{"mantissas":[1,2,5]}},"formatter":{"type":"object","name":"BasicTickFormatter","id":"p5025"},"axis_label":"Components sorted by Kappa","major_label_policy":{"type":"object","name":"AllLabels","id":"p5026"}}}],"center":[{"type":"object","name":"Grid","id":"p5027","attributes":{"axis":{"id":"p5023"}}},{"type":"object","name":"Grid","id":"p5032","attributes":{"dimension":1,"axis":{"id":"p5028"}}},{"type":"object","name":"Span","id":"p5057","attributes":{"name":"elbow","location":33.17969956866627,"line_color":"#000033","line_alpha":0.75,"line_dash":[6]}},{"type":"object","name":"Label","id":"p5058","attributes":{"text":"elbow","text_color":"#000033","text_alpha":0.75,"text_font_size":"10px","x":20,"y":33.8432935600396,"x_units":"screen"}}]}}]}}]}},{"type":"object","name":"Column","id":"p5162","attributes":{"children":[{"id":"p5154"}]}}]}},0,0]]}}]}}';
+        const render_items = [{"docid":"301a8100-85d7-4a36-902f-30c0ddc99eaf","roots":{"p5172":"dc81cb72-4f31-4b9f-b3c5-5cbe68ef010e"},"root_ids":["p5172"]}];
+        root.Bokeh.embed.embed_items(docs_json, render_items);
+        }
+        if (root.Bokeh !== undefined) {
+          embed_document(root);
+        } else {
+          let attempts = 0;
+          const timer = setInterval(function(root) {
+            if (root.Bokeh !== undefined) {
+              clearInterval(timer);
+              embed_document(root);
+            } else {
+              attempts++;
+              if (attempts > 100) {
+                clearInterval(timer);
+                console.log("Bokeh: ERROR: Unable to run BokehJS code because BokehJS library is missing");
+              }
+            }
+          }, 10, root)
+        }
+      })(window);
+    });
+  };
+  if (document.readyState != "loading") fn();
+  else document.addEventListener("DOMContentLoaded", fn);
+})();
+</script>
+
+  </body>
+</html>
