@@ -38,6 +38,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from html.parser import HTMLParser
 from pathlib import Path
 
 # --- API constants (public read-only key) -----------------------------------
@@ -53,7 +54,9 @@ DETAIL_URL = (
 )
 
 HERE = Path(__file__).resolve().parent
-RAW_CACHE = HERE / "posters_raw.json.gz"  # committed (~14 MB gzipped)
+RAW_CACHE = (
+    HERE / "posters_raw.json.gz"
+)  # generated cache; git-ignored (rebuild with --refetch)
 RAW_CACHE_PLAIN = HERE / "posters_raw.json"  # legacy uncompressed cache, if present
 POSTERS_JSON = HERE / "posters.json"
 INDEX_HTML = HERE / "index.html"
@@ -63,7 +66,7 @@ Q_TIMESLOTS = """
 query GetTimeslotsWithType($type: String!, $limit: Int, $nextToken: String) {
   getTimeslotsWithType(type: $type, limit: $limit, nextToken: $nextToken) {
     items {
-      id name type parent start end schedule posterPdf roles info
+      id name type deleted parent start end schedule posterPdf roles info
       classifications searchTerms locations subNameDetail webpages links
     }
     nextToken
@@ -185,42 +188,98 @@ def _kw_norm(s: str) -> str:
     return " " + re.sub(r"[^a-z0-9]+", " ", s.lower()).strip() + " "
 
 
-def _normalize_img(m: re.Match) -> str:
-    """Keep figure images, served through the wsrv.nl caching image proxy.
+# Abstract HTML is injected via innerHTML, so it is sanitized to a strict
+# allowlist. Regex sanitizing is bypassable (encoded `javascript:`, unexpected
+# tags, attribute edge cases), so we parse and re-emit only these tags, drop all
+# attributes except a vetted `href`/`src`, drop the poster image (127506), and
+# route figures (127505) through the wsrv.nl proxy.
+_ALLOWED_TAGS = {
+    "p",
+    "br",
+    "h3",
+    "h4",
+    "h5",
+    "em",
+    "strong",
+    "b",
+    "i",
+    "u",
+    "sup",
+    "sub",
+    "ul",
+    "ol",
+    "li",
+    "a",
+    "img",
+}
+_VOID_TAGS = {"br", "img"}
 
-    Abstract figures live on Oxford Abstracts `/content/...` URLs. Hotlinking
-    them directly is unreliable: browser image requests get 302-redirected to
-    throttled signed URLs that hang under load. Routing through wsrv.nl (which
-    fetches server-side and serves a cached, resized copy) makes them reliable.
-    The full poster (127506) is dropped; only abstract figures (127505) remain.
+
+def _proxy_figure(src: str) -> str:
+    """An `<img>` for a figure, proxied/resized via wsrv.nl — or '' to drop it.
+
+    Oxford Abstracts `/content/...` figure URLs hotlink unreliably (browser
+    requests get 302-redirected to throttled signed URLs); wsrv.nl fetches them
+    server-side and serves a cached, resized copy. The full poster (127506) is
+    dropped (reachable via the official-app link); only figures (127505) remain.
     """
-    src = re.search(r'src\s*=\s*"([^"]+)"', m.group(0))
-    if not src or not src.group(1).startswith("https://"):
+    if not src.startswith("https://") or POSTER_FILE_MARK in src:
         return ""
-    if POSTER_FILE_MARK in src.group(1):
-        return ""  # the full poster — omitted; reachable via the official-app link
     proxied = (
         "https://wsrv.nl/?url="
-        + urllib.parse.quote(src.group(1), safe="")
+        + urllib.parse.quote(src, safe="")
         + "&amp;w=1200&amp;output=jpg&amp;q=88"
     )
-    return f'<img src="{proxied}" loading="lazy" alt="Abstract figure">'
+    return (
+        f'<img src="{proxied}" loading="lazy" alt="Abstract figure"'
+        ' role="button" tabindex="0" aria-label="Enlarge figure">'
+    )
+
+
+class _Sanitizer(HTMLParser):
+    """Re-emit only an allowlist of tags/attributes from untrusted abstract HTML."""
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.out: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag not in _ALLOWED_TAGS:
+            return
+        a = dict(attrs)
+        if tag == "img":
+            self.out.append(_proxy_figure(a.get("src") or ""))
+        elif tag == "a":
+            href = a.get("href") or ""
+            ok = href.startswith("https://")
+            attr = (
+                f' href="{html.escape(href, quote=True)}" target="_blank" rel="noopener nofollow"'
+                if ok
+                else ""
+            )
+            self.out.append(f"<a{attr}>")
+        else:
+            self.out.append(f"<{tag}>")
+
+    def handle_startendtag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        self.handle_starttag(tag, attrs)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in _ALLOWED_TAGS and tag not in _VOID_TAGS:
+            self.out.append(f"</{tag}>")
+
+    def handle_data(self, data: str) -> None:
+        self.out.append(html.escape(data, quote=False))
 
 
 def sanitize_html(s: str) -> str:
-    """Light sanitization for embedding an abstract body via innerHTML.
-
-    Drops scripts/styles, inline handlers and non-figure media, and normalizes
-    figure images to a clean lazy-loaded `<img>` pointing at the public source.
-    """
+    """Sanitize abstract HTML to a small tag allowlist before innerHTML use."""
     if not s:
         return ""
-    s = re.sub(r"(?is)<(script|style|video|iframe|object|embed)\b.*?</\1>", "", s)
-    s = re.sub(r"(?is)<(source|track|input)\b[^>]*>", "", s)
-    s = re.sub(r"(?is)<img\b[^>]*>", _normalize_img, s)
-    s = re.sub(r"""(?is)\son\w+\s*=\s*(".*?"|'.*?')""", "", s)
-    s = re.sub(r"(?i)javascript:", "", s)
-    return s.strip()
+    parser = _Sanitizer()
+    parser.feed(s)
+    parser.close()
+    return "".join(parser.out).strip()
 
 
 def parse_authors(info: str) -> str:
@@ -957,6 +1016,9 @@ a { color: inherit; text-decoration: none; }
   position: absolute;
   top: 14px;
   right: 14px;
+  appearance: none;
+  border: 0;
+  cursor: pointer;
   color: #fff;
   background: oklch(0% 0 0 / 0.7);
   padding: 7px 12px;
@@ -1385,18 +1447,25 @@ list.addEventListener('error', e => {
 const lightbox = document.createElement('div');
 lightbox.className = 'lightbox';
 lightbox.setAttribute('role', 'dialog');
+lightbox.setAttribute('aria-modal', 'true');
 lightbox.setAttribute('aria-label', 'Figure, full screen');
-lightbox.innerHTML = '<span class="lightbox__close">Esc / tap to close</span>';
+const lightboxClose = document.createElement('button');
+lightboxClose.type = 'button';
+lightboxClose.className = 'lightbox__close';
+lightboxClose.textContent = 'Esc / tap to close';
 const lightboxImg = document.createElement('img');
 lightboxImg.alt = 'Poster figure, full size';
-lightbox.appendChild(lightboxImg);
+lightbox.append(lightboxClose, lightboxImg);
 document.body.appendChild(lightbox);
-function closeLightbox() { lightbox.classList.remove('open'); document.body.style.overflow = ''; }
-lightbox.addEventListener('click', closeLightbox);
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
-list.addEventListener('click', e => {
-  const img = e.target.closest('.abstract img');
-  if (!img) return;
+let lightboxOpener = null;
+function closeLightbox() {
+  if (!lightbox.classList.contains('open')) return;
+  lightbox.classList.remove('open');
+  document.body.style.overflow = '';
+  if (lightboxOpener) lightboxOpener.focus();             // return focus to the figure
+}
+function openLightbox(img) {
+  lightboxOpener = img;
   const cur = img.currentSrc || img.src;
   lightboxImg.src = cur;                                  // show the loaded image instantly
   const hi = cur.replace(/([?&])w=\d+/, '$1w=2000').replace(/([?&])q=\d+/, '$1q=92');
@@ -1407,6 +1476,19 @@ list.addEventListener('click', e => {
   }
   lightbox.classList.add('open');
   document.body.style.overflow = 'hidden';
+  lightboxClose.focus();                                  // move focus into the dialog
+}
+lightbox.addEventListener('click', closeLightbox);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+list.addEventListener('click', e => {
+  const img = e.target.closest('.abstract img');
+  if (img) openLightbox(img);
+});
+list.addEventListener('keydown', e => {
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.abstract img')) {
+    e.preventDefault();
+    openLightbox(e.target);
+  }
 });
 
 /* ---------- Init ---------- */
