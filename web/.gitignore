@@ -1,0 +1,7 @@
+# Raw API cache (~14 MB gz / ~64 MB plain) — regenerable with `python build_site.py --refetch`
+posters_raw.json
+posters_raw.json.gz
+
+# Python
+__pycache__/
+*.pyc
