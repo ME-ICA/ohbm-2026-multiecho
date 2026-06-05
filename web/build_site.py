@@ -548,7 +548,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Multi-echo fMRI posters · OHBM 2026</title>
+<title>OHBM 2026 abstracts</title>
 <meta name="description" content="An unofficial community index of OHBM 2026 posters — focused on multi-echo fMRI, but searchable across the whole meeting. Filter by day and method, browse every poster, and read abstracts in place.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1165,8 +1165,8 @@ a { color: inherit; text-decoration: none; }
 <header class="masthead shell">
   <div class="masthead__top">
     <div>
-      <p class="eyebrow">OHBM 2026 · Organization for Human Brain Mapping · Bordeaux, France</p>
-      <h1>Multi-echo fMRI posters</h1>
+      <p class="eyebrow">Organization for Human Brain Mapping · Bordeaux, France</p>
+      <h1>OHBM 2026 abstracts</h1>
     </div>
     <div class="masthead__tools">
       <div class="display">
