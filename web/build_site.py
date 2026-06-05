@@ -1,10 +1,18 @@
 #!/usr/bin/env python3
-"""Build a searchable static site of multi-echo fMRI posters from OHBM 2026.
+"""Build a searchable static site of OHBM 2026 posters, focused on multi-echo fMRI.
 
 Fetches all "Poster Abstract" timeslots from the OHBM conference AppSync GraphQL
-API, filters them for multi-echo fMRI content (title + abstract), enriches the
-matches with presentation day / keywords / categories, and generates a
-self-contained ``index.html`` plus ``posters.json``.
+API, keeps *every* poster, and tags the multi-echo-fMRI ones (title + abstract)
+as the default-filtered subset. Enriches each with presentation day / keywords /
+categories and renders, into ``docs/`` beside the interactive tedana reports:
+``index.html`` (all-poster metadata + the matched abstracts inlined),
+``posters.json``, and per-poster ``abstracts/<id>.html`` files the page
+lazy-loads on demand (so the page itself stays light despite covering ~3,200
+posters).
+
+The matched subset is configurable: ``--query`` swaps the built-in multi-echo
+patterns for any regex and ``--label`` names it, so the same tool can build other
+filtered itineraries.
 
 The OHBM app exposes a public read-only API key. We are polite: small delay
 between pages, bounded retries. Reverse-engineered facts driving this script:
@@ -20,9 +28,11 @@ between pages, bounded retries. Reverse-engineered facts driving this script:
 
 Usage::
 
-    python build_site.py            # fetch (or reuse cache), filter, build
-    python build_site.py --refetch  # force a fresh fetch from the API
-    python build_site.py --no-fetch # use cache only (fast pattern-tuning loop)
+    python build_site.py              # fetch (or reuse cache), build into ../docs
+    python build_site.py --refetch    # force a fresh fetch from the API
+    python build_site.py --no-fetch   # use cache only (fast re-filter loop)
+    # build a different itinerary into its own page:
+    python build_site.py --query 'diffusion|DWI' --label diffusion --output-file diffusion.html
 """
 
 from __future__ import annotations
@@ -38,6 +48,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from collections.abc import Callable
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -58,8 +69,9 @@ RAW_CACHE = (
     HERE / "posters_raw.json.gz"
 )  # generated cache; git-ignored (rebuild with --refetch)
 RAW_CACHE_PLAIN = HERE / "posters_raw.json"  # legacy uncompressed cache, if present
-POSTERS_JSON = HERE / "posters.json"
-INDEX_HTML = HERE / "index.html"
+# The rendered site is written into the repo's docs/ (the GitHub Pages source),
+# beside the interactive tedana reports. Override with --output-dir/--output-file.
+DEFAULT_OUTPUT_DIR = HERE.parent / "docs"
 
 # --- GraphQL queries ---------------------------------------------------------
 Q_TIMESLOTS = """
@@ -363,6 +375,20 @@ def multiecho_reasons(text: str) -> list[str]:
     return list(dict.fromkeys(reasons))
 
 
+def make_matcher(query: str | None, label: str) -> Callable[[str], list[str]]:
+    """Return a text→reasons matcher.
+
+    Without *query*, use the built-in multi-echo-fMRI patterns (whose reasons
+    double as the Method filter chips). With *query* (a regex), a poster matches
+    when the pattern is found and is tagged with the single *label* — so the same
+    tool can build any filtered itinerary (e.g. ``--query 'diffusion|DWI'``).
+    """
+    if not query:
+        return multiecho_reasons
+    rx = re.compile(query, re.I)
+    return lambda text: [label] if rx.search(text) else []
+
+
 # --- Classifier enrichment ---------------------------------------------------
 def type_label_map() -> dict[str, str]:
     data = gql(
@@ -427,8 +453,16 @@ def enrich(matched: list[dict]) -> None:
 
 
 # --- Output ------------------------------------------------------------------
-def build_records(raw_items: list[dict]) -> list[dict]:
-    matched: list[dict] = []
+def build_records(
+    raw_items: list[dict], matcher: Callable[[str], list[str]]
+) -> list[dict]:
+    """Parse every (non-deleted, non-test) poster, tagging matches via *matcher*.
+
+    Every poster is kept so the site can browse the whole meeting; the records
+    *matcher* returns reasons for are flagged ``matched`` and form the
+    default-filtered subset (multi-echo, by default).
+    """
+    records: list[dict] = []
     for item in raw_items:
         if item.get("deleted"):
             continue
@@ -436,49 +470,76 @@ def build_records(raw_items: list[dict]) -> list[dict]:
         if "test poster" in name.lower():
             continue
         text = strip_html(name) + "  " + strip_html(item.get("info") or "")
-        reasons = multiecho_reasons(text)
-        if not reasons:
-            continue
         rec = parse_poster(item)
-        rec["reasons"] = reasons
-        matched.append(rec)
-    matched.sort(key=lambda r: (r["number"] or "9999", r["title"]))
-    return matched
+        rec["reasons"] = matcher(text)
+        rec["matched"] = bool(rec["reasons"])
+        records.append(rec)
+    records.sort(key=lambda r: (r["number"] or "9999", r["title"]))
+    return records
 
 
-def write_json(matched: list[dict]) -> None:
-    public = []
-    for p in matched:
-        q = {k: v for k, v in p.items() if not k.startswith("_")}
-        public.append(q)
-    POSTERS_JSON.write_text(json.dumps(public, indent=2, ensure_ascii=False))
-    print(f"Wrote {POSTERS_JSON.name} ({len(public)} posters)")
+def split_abstracts(records: list[dict], out_dir: Path) -> int:
+    """Inline matched abstracts; emit the rest as lazy-loaded per-poster files.
+
+    The default (matched) view stays self-contained and instant. Every other
+    poster's abstract is written to ``abstracts/<id>.html`` and fetched only when
+    its card is expanded, so the inlined page payload stays small.
+    """
+    abs_dir = out_dir / "abstracts"
+    written = 0
+    for rec in records:
+        body = (rec.get("abstract_html") or "").strip()
+        rec["has_abstract"] = bool(body)
+        if rec["matched"] or not body:
+            continue  # matched posters keep their abstract inline
+        abs_dir.mkdir(parents=True, exist_ok=True)
+        (abs_dir / f"{rec['id']}.html").write_text(
+            rec["abstract_html"], encoding="utf-8"
+        )
+        rec["abstract_html"] = ""  # dropped from the inlined payload
+        written += 1
+    if written:
+        print(f"Wrote {written} lazy-loaded abstracts → {abs_dir.name}/")
+    return written
 
 
-def generate_html(matched: list[dict], total: int) -> None:
-    public = [{k: v for k, v in p.items() if not k.startswith("_")} for p in matched]
+def write_json(records: list[dict], out_dir: Path) -> None:
+    public = [{k: v for k, v in p.items() if not k.startswith("_")} for p in records]
+    path = out_dir / "posters.json"
+    path.write_text(json.dumps(public, indent=2, ensure_ascii=False))
+    print(f"Wrote {path.name} ({len(public)} posters)")
+
+
+def generate_html(
+    records: list[dict], total: int, out_dir: Path, filename: str, label: str
+) -> None:
+    public = [{k: v for k, v in p.items() if not k.startswith("_")} for p in records]
     data_js = json.dumps(public, ensure_ascii=False).replace("</", "<\\/")
+    matched_n = sum(1 for p in records if p.get("matched"))
     today = _dt.date.today()
     generated = f"{today.day} {today:%B %Y}"  # e.g. "4 June 2026"
     page = (
-        HTML_TEMPLATE.replace("{{COUNT}}", str(len(public)))
+        HTML_TEMPLATE.replace("{{COUNT}}", str(matched_n))
         .replace("{{TOTAL}}", f"{total:,}")
+        .replace("{{LABEL}}", label)
         .replace("{{GENERATED}}", generated)
         .replace("{{DATA}}", data_js)
     )
-    INDEX_HTML.write_text(page)
-    print(f"Wrote {INDEX_HTML.name} ({len(public)} posters)")
+    out = out_dir / filename
+    out.write_text(page)
+    print(f"Wrote {out.name} ({len(public)} posters; {matched_n} {label})")
 
 
-def print_summary(matched: list[dict]) -> None:
-    print(f"\nMatched {len(matched)} multi-echo posters.")
+def print_summary(records: list[dict], label: str) -> None:
+    matched = [p for p in records if p.get("matched")]
+    print(f"\nMatched {len(matched)} {label} posters (of {len(records)} kept).")
     counts: dict[str, int] = {}
     for p in matched:
         for r in p["reasons"]:
             counts[r] = counts.get(r, 0) + 1
     print("Why-matched breakdown (review these — tune patterns + rerun --no-fetch):")
-    for label, n in sorted(counts.items(), key=lambda kv: -kv[1]):
-        print(f"  {n:>3}  {label}")
+    for lbl, n in sorted(counts.items(), key=lambda kv: -kv[1]):
+        print(f"  {n:>3}  {lbl}")
 
 
 # --- HTML template (self-contained; data inlined) ----------------------------
@@ -488,7 +549,7 @@ HTML_TEMPLATE = r"""<!DOCTYPE html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Multi-echo fMRI posters · OHBM 2026</title>
-<meta name="description" content="An unofficial community index of every multi-echo fMRI poster at OHBM 2026, Bordeaux. Search, filter by day and method, and read abstracts.">
+<meta name="description" content="An unofficial community index of OHBM 2026 posters — focused on multi-echo fMRI, but searchable across the whole meeting. Filter by day and method, browse every poster, and read abstracts in place.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <style>
@@ -656,6 +717,23 @@ a { color: inherit; text-decoration: none; }
 }
 .panel__group + .panel__group { margin-top: 20px; }
 
+/* Reports menu sits beside Display; both reuse .icon-btn + .panel */
+.masthead__tools { display: flex; gap: 10px; flex: 0 0 auto; }
+.panel__link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+  padding: 9px 0;
+  color: var(--fg);
+  font-size: 14px;
+  border-bottom: 1px solid var(--rule);
+  transition: color var(--dur-fast) var(--ease);
+}
+.panel__link:last-child { border-bottom: 0; }
+.panel__link:hover { color: var(--accent); }
+.panel__link svg { width: 14px; height: 14px; flex: 0 0 auto; color: var(--fg-subtle); }
+
 .segment { display: flex; border: 1px solid var(--rule-strong); border-radius: 2px; overflow: hidden; }
 .segment button {
   flex: 1;
@@ -770,6 +848,20 @@ a { color: inherit; text-decoration: none; }
 .sort select:hover { border-color: var(--accent); }
 .sort svg { position: absolute; right: 10px; width: 14px; height: 14px; pointer-events: none; color: var(--fg-muted); }
 
+/* Scope toggle — multi-echo (default) vs the whole meeting */
+.scope { flex: 0 0 auto; display: flex; border: 1px solid var(--rule-strong); border-radius: 2px; overflow: hidden; }
+.scope button {
+  appearance: none; background: transparent; border: 0;
+  border-left: 1px solid var(--rule-strong);
+  color: var(--fg-muted); font-family: var(--font-mono);
+  font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+  padding: 11px 12px; cursor: pointer; white-space: nowrap;
+  transition: background var(--dur-fast) var(--ease), color var(--dur-fast) var(--ease);
+}
+.scope button:first-child { border-left: 0; }
+.scope button:hover { color: var(--fg); }
+.scope button[aria-pressed="true"] { background: var(--accent); color: var(--c-fg-on-dark); }
+
 .tool-btn {
   flex: 0 0 auto;
   appearance: none;
@@ -818,6 +910,7 @@ a { color: inherit; text-decoration: none; }
 }
 .filters[hidden] { display: none; }
 .filter-line { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.filter-line[hidden] { display: none; }
 .filter-line__label {
   flex: 0 0 auto;
   width: 58px;
@@ -966,6 +1059,8 @@ a { color: inherit; text-decoration: none; }
 }
 .abstract.open { display: block; }
 .abstract { max-width: 760px; }
+.abstract__status { margin: 0; color: var(--fg-muted); font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.02em; }
+.abstract__status a { color: var(--accent); border-bottom: 1px solid var(--accent); }
 .abstract h2, .abstract h3, .abstract h4 {
   font-family: var(--font-mono);
   font-weight: 600;
@@ -1073,29 +1168,47 @@ a { color: inherit; text-decoration: none; }
       <p class="eyebrow">OHBM 2026 · Organization for Human Brain Mapping · Bordeaux, France</p>
       <h1>Multi-echo fMRI posters</h1>
     </div>
-    <div class="display">
-      <button class="icon-btn" id="displayBtn" aria-haspopup="true" aria-expanded="false" aria-label="Display settings">
-        <i data-lucide="sliders-horizontal"></i><span>Display</span>
-      </button>
-      <div class="panel" id="displayPanel" role="dialog" aria-label="Display settings">
-        <div class="panel__group">
-          <p class="panel__label">Theme</p>
-          <div class="segment" id="themeSeg" role="group" aria-label="Theme">
-            <button data-theme-mode="auto" aria-pressed="false"><i data-lucide="monitor"></i>Auto</button>
-            <button data-theme-mode="light" aria-pressed="false"><i data-lucide="sun"></i>Light</button>
-            <button data-theme-mode="dark" aria-pressed="false"><i data-lucide="moon"></i>Dark</button>
+    <div class="masthead__tools">
+      <div class="display">
+        <button class="icon-btn" id="reportsBtn" aria-haspopup="true" aria-expanded="false" aria-label="Multi-echo resources">
+          <i data-lucide="folder-open"></i><span>Reports</span>
+        </button>
+        <div class="panel" id="reportsPanel" role="dialog" aria-label="Multi-echo resources">
+          <div class="panel__group">
+            <p class="panel__label">Interactive tedana reports</p>
+            <a class="panel__link" href="./tedana_processed/tedana_report.html"><span>5-echo block design · robustICA</span></a>
+            <a class="panel__link" href="./tedana_external_regress_processed/tedana_report.html"><span>5-echo block design · external regressors</span></a>
+          </div>
+          <div class="panel__group">
+            <p class="panel__label">Code</p>
+            <a class="panel__link" href="https://github.com/ME-ICA/ohbm-2026-multiecho/blob/main/process_five_echo_dataset.ipynb" target="_blank" rel="noopener"><span>Notebook that builds the reports</span><i data-lucide="external-link"></i></a>
           </div>
         </div>
-        <div class="panel__group">
-          <p class="panel__label">Accent</p>
-          <div class="swatches" id="swatches" role="group" aria-label="Accent color"></div>
+      </div>
+      <div class="display">
+        <button class="icon-btn" id="displayBtn" aria-haspopup="true" aria-expanded="false" aria-label="Display settings">
+          <i data-lucide="sliders-horizontal"></i><span>Display</span>
+        </button>
+        <div class="panel" id="displayPanel" role="dialog" aria-label="Display settings">
+          <div class="panel__group">
+            <p class="panel__label">Theme</p>
+            <div class="segment" id="themeSeg" role="group" aria-label="Theme">
+              <button data-theme-mode="auto" aria-pressed="false"><i data-lucide="monitor"></i>Auto</button>
+              <button data-theme-mode="light" aria-pressed="false"><i data-lucide="sun"></i>Light</button>
+              <button data-theme-mode="dark" aria-pressed="false"><i data-lucide="moon"></i>Dark</button>
+            </div>
+          </div>
+          <div class="panel__group">
+            <p class="panel__label">Accent</p>
+            <div class="swatches" id="swatches" role="group" aria-label="Accent color"></div>
+          </div>
         </div>
       </div>
     </div>
   </div>
-  <p class="lede">An unofficial community index of every multi-echo poster at the 2026 Annual Meeting. Search by title, author or keyword, filter by session day and method, and read the abstracts in place.</p>
+  <p class="lede">An unofficial community index of OHBM 2026 — focused on multi-echo fMRI, but searchable across the whole meeting. Filter by session day and method, switch to every poster, and read the abstracts in place.</p>
   <p class="stat">
-    <span><span class="stat__count" id="totalCount">{{COUNT}}</span> multi-echo posters</span>
+    <span><span class="stat__count" id="totalCount">{{COUNT}}</span> {{LABEL}} posters</span>
     <span class="dot">·</span>
     <span>of {{TOTAL}} total</span>
     <span class="dot">·</span>
@@ -1121,13 +1234,17 @@ a { color: inherit; text-decoration: none; }
         </select>
         <i data-lucide="chevron-down"></i>
       </div>
+      <div class="scope" id="scope" role="group" aria-label="Poster scope">
+        <button type="button" data-scope="me" aria-pressed="true">Multi-echo</button>
+        <button type="button" data-scope="all" aria-pressed="false">All posters</button>
+      </div>
     </div>
     <div class="filters" id="filterPanel" hidden>
       <div class="filter-line">
         <span class="filter-line__label">Day</span>
         <div class="chips" id="dayChips"></div>
       </div>
-      <div class="filter-line">
+      <div class="filter-line" id="methodLine">
         <span class="filter-line__label">Method</span>
         <div class="chips" id="reasonChips"></div>
       </div>
@@ -1236,22 +1353,34 @@ document.getElementById('themeSeg').addEventListener('click', e => {
   lsSet(LS_THEME, btn.dataset.themeMode);
   applyTheme();
 });
-const displayBtn = document.getElementById('displayBtn');
-const displayPanel = document.getElementById('displayPanel');
-displayBtn.addEventListener('click', e => {
-  e.stopPropagation();
-  const open = displayPanel.classList.toggle('open');
-  displayBtn.setAttribute('aria-expanded', String(open));
+/* Masthead dropdowns (Display + Reports): toggle, close the other, dismiss on outside-click / Escape. */
+const dropdowns = [['displayBtn', 'displayPanel'], ['reportsBtn', 'reportsPanel']]
+  .map(([b, p]) => ({ btn: document.getElementById(b), panel: document.getElementById(p) }))
+  .filter(d => d.btn && d.panel);
+function closeDropdowns(except) {
+  dropdowns.forEach(d => {
+    if (d === except) return;
+    d.panel.classList.remove('open');
+    d.btn.setAttribute('aria-expanded', 'false');
+  });
+}
+dropdowns.forEach(d => {
+  d.btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const open = d.panel.classList.toggle('open');
+    d.btn.setAttribute('aria-expanded', String(open));
+    if (open) closeDropdowns(d);
+  });
 });
 document.addEventListener('click', e => {
-  if (!displayPanel.contains(e.target) && e.target !== displayBtn) {
-    displayPanel.classList.remove('open');
-    displayBtn.setAttribute('aria-expanded', 'false');
-  }
+  dropdowns.forEach(d => {
+    if (!d.panel.contains(e.target) && !d.btn.contains(e.target)) {
+      d.panel.classList.remove('open');
+      d.btn.setAttribute('aria-expanded', 'false');
+    }
+  });
 });
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { displayPanel.classList.remove('open'); displayBtn.setAttribute('aria-expanded', 'false'); }
-});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDropdowns(null); });
 
 /* ---------- Helpers ---------- */
 function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
@@ -1279,8 +1408,9 @@ const dayOrder = [...new Set(POSTERS.flatMap(p => p.days || []))].sort((a, b) =>
 const reasonCounts = {};
 POSTERS.forEach(p => (p.reasons || []).forEach(r => { reasonCounts[r] = (reasonCounts[r] || 0) + 1; }));
 const reasonOrder = Object.keys(reasonCounts).sort((a, b) => reasonCounts[b] - reasonCounts[a] || a.localeCompare(b));
+const matchedCount = POSTERS.filter(p => p.matched).length;
 
-const state = { q: '', days: new Set(), reasons: new Set(), sort: 'number' };
+const state = { q: '', days: new Set(), reasons: new Set(), sort: 'number', meOnly: true };
 
 function buildFilterChips() {
   const dayWrap = document.getElementById('dayChips');
@@ -1334,12 +1464,13 @@ function card(p) {
   const links = [];
   if (p.url) links.push('<a class="act" href="' + esc(p.url) + '" target="_blank" rel="noopener">Official app <i data-lucide="external-link"></i></a>');
 
-  const hasAbstract = !!(p.abstract_html && p.abstract_html.trim());
+  const inlineAbs = (p.abstract_html && p.abstract_html.trim()) ? p.abstract_html : '';
+  const hasAbstract = !!inlineAbs || !!p.has_abstract;
   const toggle = hasAbstract
     ? '<button class="act toggle" type="button">Read abstract <i data-lucide="chevron-down" class="chev"></i></button>'
     : '';
   const abstract = hasAbstract
-    ? '<div class="abstract">' + p.abstract_html + '</div>'
+    ? '<div class="abstract">' + inlineAbs + '</div>'
     : '';
 
   el.innerHTML =
@@ -1354,13 +1485,37 @@ function card(p) {
     abstract;
 
   const t = el.querySelector('.toggle');
-  if (t) t.addEventListener('click', () => {
-    const a = el.querySelector('.abstract');
-    const open = a.classList.toggle('open');
-    t.classList.toggle('is-open', open);
-    t.childNodes[0].nodeValue = open ? 'Hide abstract ' : 'Read abstract ';
-  });
+  if (t) {
+    const needsFetch = !inlineAbs;   // abstract lives in abstracts/<id>.html
+    t.addEventListener('click', () => {
+      const a = el.querySelector('.abstract');
+      const open = a.classList.toggle('open');
+      t.classList.toggle('is-open', open);
+      t.childNodes[0].nodeValue = open ? 'Hide abstract ' : 'Read abstract ';
+      if (open && needsFetch && !a.dataset.loaded) loadAbstract(a, p);
+    });
+  }
   return el;
+}
+
+/* ---------- Lazy abstracts (non-matched posters live in abstracts/<id>.html) ---------- */
+const abstractCache = new Map();
+async function loadAbstract(el, p) {
+  el.dataset.loaded = '1';
+  el.innerHTML = '<p class="abstract__status">Loading abstract…</p>';
+  try {
+    if (!abstractCache.has(p.id)) {
+      const res = await fetch('abstracts/' + encodeURIComponent(p.id) + '.html');
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      abstractCache.set(p.id, await res.text());
+    }
+    el.innerHTML = abstractCache.get(p.id);          // already sanitized at build time
+    if (window.lucide) lucide.createIcons();
+  } catch (err) {
+    el.dataset.loaded = '';                          // allow a retry on next open
+    el.innerHTML = '<p class="abstract__status">Couldn’t load the abstract. ' +
+      '<a href="' + esc(p.url) + '" target="_blank" rel="noopener">Open it on the official app ↗</a></p>';
+  }
 }
 
 /* ---------- Render ---------- */
@@ -1368,8 +1523,11 @@ const list = document.getElementById('list');
 const resultLine = document.getElementById('resultLine');
 
 function render() {
+  const methodLine = document.getElementById('methodLine');
+  if (methodLine) methodLine.hidden = !state.meOnly;
   const terms = state.q.trim().toLowerCase().split(/\s+/).filter(Boolean);
   let shown = POSTERS.filter(p => {
+    if (state.meOnly && !p.matched) return false;
     const h = haystack(p);
     if (!terms.every(t => h.includes(t))) return false;
     if (state.days.size && !(p.days || []).some(d => state.days.has(d))) return false;
@@ -1391,8 +1549,9 @@ function render() {
     list.appendChild(frag);
   }
 
+  const universe = state.meOnly ? matchedCount : POSTERS.length;
   const activeFilters = state.days.size + state.reasons.size + (terms.length ? 1 : 0);
-  resultLine.innerHTML = 'Showing ' + shown.length + ' of ' + POSTERS.length +
+  resultLine.innerHTML = 'Showing ' + shown.length + ' of ' + universe +
     (activeFilters ? ' <span class="reset" id="resetBtn">Clear all</span>' : '');
   const rb = document.getElementById('resetBtn');
   if (rb) rb.addEventListener('click', resetAll);
@@ -1436,6 +1595,18 @@ filterToggle.addEventListener('click', () => {
   const open = filterPanel.hasAttribute('hidden');
   if (open) filterPanel.removeAttribute('hidden'); else filterPanel.setAttribute('hidden', '');
   filterToggle.setAttribute('aria-expanded', String(open));
+});
+
+/* ---------- Scope: multi-echo (default) vs all posters ---------- */
+const scopeEl = document.getElementById('scope');
+scopeEl.addEventListener('click', e => {
+  const b = e.target.closest('button');
+  if (!b) return;
+  state.meOnly = b.dataset.scope === 'me';
+  scopeEl.querySelectorAll('button').forEach(x =>
+    x.setAttribute('aria-pressed', String((x.dataset.scope === 'me') === state.meOnly)));
+  if (!state.meOnly && state.reasons.size) { state.reasons.clear(); syncChips(); }
+  render();
 });
 
 /* Hide broken abstract figures (withdrawn submissions etc.) */
@@ -1492,7 +1663,7 @@ list.addEventListener('keydown', e => {
 });
 
 /* ---------- Init ---------- */
-document.getElementById('totalCount').textContent = POSTERS.length;
+document.getElementById('totalCount').textContent = matchedCount;
 buildSwatches();
 buildFilterChips();
 applyTheme();
@@ -1512,20 +1683,46 @@ def main() -> None:
     g.add_argument(
         "--no-fetch", action="store_true", help="use cache only (fast re-filter)"
     )
+    ap.add_argument(
+        "--query",
+        default=None,
+        help="regex selecting the default-filtered subset "
+        "(default: built-in multi-echo fMRI patterns)",
+    )
+    ap.add_argument(
+        "--label",
+        default="multi-echo",
+        help="name of the matched subset / default filter (default: multi-echo)",
+    )
+    ap.add_argument(
+        "--output-dir",
+        type=Path,
+        default=DEFAULT_OUTPUT_DIR,
+        help="directory for the rendered site (default: ../docs)",
+    )
+    ap.add_argument(
+        "--output-file",
+        default="index.html",
+        help="rendered HTML filename (default: index.html)",
+    )
     args = ap.parse_args()
     mode = "refetch" if args.refetch else "no-fetch" if args.no_fetch else "auto"
+    out_dir: Path = args.output_dir
+    out_dir.mkdir(parents=True, exist_ok=True)
 
     raw_items = load_or_fetch(mode)
     print(f"Total posters available: {len(raw_items)}")
 
-    matched = build_records(raw_items)
-    if matched:
-        print(f"Enriching {len(matched)} matches with day/keywords/categories…")
-        enrich(matched)
-    write_json(matched)
-    generate_html(matched, len(raw_items))
-    print_summary(matched)
-    print(f"\nDone. Open {INDEX_HTML.name} in a browser.")
+    records = build_records(raw_items, make_matcher(args.query, args.label))
+    matched_n = sum(1 for r in records if r["matched"])
+    print(f"Kept {len(records)} posters; {matched_n} match '{args.label}'.")
+    print(f"Enriching {len(records)} posters with day/keywords/categories…")
+    enrich(records)
+    split_abstracts(records, out_dir)
+    write_json(records, out_dir)
+    generate_html(records, len(records), out_dir, args.output_file, args.label)
+    print_summary(records, args.label)
+    print(f"\nDone. Open {out_dir / args.output_file} in a browser.")
 
 
 if __name__ == "__main__":
