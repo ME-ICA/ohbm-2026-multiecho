@@ -7,6 +7,10 @@ five-echo-dataset/tmp/
 five-echo-dataset/CSF*
 five-echo-dataset/Segsy/
 five-echo-dataset/p06*
+docs/tedana_processed/rica/
+.DS_Store
+.vscode
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -19,16 +19,34 @@ We are working on an [interactive book to support multi-echo fMRI education](htt
 
 ## Full day multi-echo educational course at OHBM 2026!
 
-More details will be added here
+### Practical Multi-echo fMRI: Underlying principles, challenges, potential, and applications
+
+Sunday 9:00-17:30
+
+**Organizers**: Sarah Goodale, Eneko Uruñuela, Daniel Handwerker
+
+**Presenters**: Daniel Handwerker, Sarah Goodale, Mélanie Garcia, Javier Gonzalez-Castillo, Eric Pierre, Eui-Jin Jung, Julia Moser, Kathryn Lamar-Bruno, Nathan Spreng, Prantik Kundu, Logan Dowdle, Eneko Uruñuela
+[Talk titles and schedule here](https://me-ica.github.io/multi-echo-data-analysis/content/multi-echo-ed-course-schedule.pdf)
 
 ## Presentations
 
-(Formatting to be improved)
+### 3024 Prior Knowledge Shapes the Neural Correlates of Selective Attention Higher Cognitive Functions 
 
-3024	Wednesday, June 17 | 13:45-14:45	Thursday, June 18 | 14:45-15:45	Prior Knowledge Shapes the Neural Correlates of Selective Attention	Higher Cognitive Functions	Diveica
+Veronica Diveica<BR>
+Presentation: Wednesday, Room C<BR>
+"Higher Cognitive Functions" Session<BR>
+15:45-17:00 3rd of 6 talks<BR>
+Poster: Wednesday/Thursday<BR>
+[Abstract](https://ohbm.floq.live/event/ohbm-2026/posters-with-category?objectClass=timeslot&objectId=69f0924b9feb6830867c06d9&type=detail)
 
-2044	Wednesday, June 17 | 13:45-14:45	Thursday, June 18 | 14:45-15:45	Mesoscopic 0.35 mm T2*w MRI at 7T reveals arteries comparable to TOF and rich venous anatomy	Modeling and Analysis Methods	Gulban
-(Anatomical multi-echo)
+### 2044 Mesoscopic 0.35 mm T2*w MRI at 7T reveals arteries comparable to TOF and rich venous anatomy
+
+
+Faruk Gulban<BR>
+Presentation: Monday, Room D<BR>
+"Machine Learning for Structure-Funciton Mapping" Session<BR>
+16:45-18:00, 3rd of 6 talks<BR>
+[Abstract](https://ohbm.floq.live/event/ohbm-2026/search?objectClass=timeslot&objectId=699463cdf6a6baba5f84db78&type=detail)
 
 ## Multi-echo posters
 
